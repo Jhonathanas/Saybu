@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package saybu.common.v1;
+
+option go_package = "saybu/gen/saybu/common/v1;commonv1";
+
+// Money adalah nominal uang. Selalu rupiah penuh (tanpa sen).
+message Money {
+  int64 amount = 1;
+  string currency = 2; // default "IDR"
+}
+
+// PageRequest untuk paginasi.
+message PageRequest {
+  int32 page = 1;  // mulai 1
+  int32 limit = 2; // default 20, maks 100
+}
+
+// PageResponse metadata paginasi.
+message PageResponse {
+  int32 page = 1;
+  int32 limit = 2;
+  int64 total = 3;
+  int32 total_pages = 4;
+}

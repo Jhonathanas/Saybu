@@ -1,0 +1,31 @@
+# --- secrets & env ---
+.env
+.env.*
+!.env.example
+
+# --- data & build output ---
+data/
+!data/.gitkeep
+backend/bin/
+*.exe
+*.test
+*.out
+coverage.out
+coverage.html
+
+# --- frontend ---
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+
+# --- editor / OS ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.log
+
+# --- local tools ---
+.tool-versions
