@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+package saybu.auth.v1;
+
+import "google/protobuf/empty.proto";
+
+option go_package = "saybu/gen/saybu/auth/v1;authv1";
+
+// AuthService menangani registrasi, login, rotasi refresh token, dan profil.
+service AuthService {
+  rpc Register(RegisterRequest) returns (AuthResponse);
+  rpc Login(LoginRequest) returns (AuthResponse);
+  rpc Refresh(RefreshRequest) returns (AuthResponse);
+  rpc Logout(LogoutRequest) returns (google.protobuf.Empty);
+  rpc GetUser(GetUserRequest) returns (User);
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
+}
+
+message User {
+  string id = 1;
+  string name = 2;
+  string phone = 3;
+  string email = 4;
+  string role = 5;
+  string created_at = 6; // RFC3339
+}
+
+message RegisterRequest {
+  string name = 1;
+  string phone = 2;
+  string email = 3;
+  string password = 4;
+}
+
+message LoginRequest {
+  string identifier = 1; // nomor HP atau email
+  string password = 2;
+}
+
+message RefreshRequest {
+  string refresh_token = 1;
+}
+
+message LogoutRequest {
+  string refresh_token = 1;
+}
+
+message GetUserRequest {
+  string id = 1;
+}
+
+message ListUsersRequest {
+  int32 page = 1;
+  int32 limit = 2;
+  string query = 3;
+}
+
+message ListUsersResponse {
+  repeated User users = 1;
+  int32 page = 2;
+  int32 limit = 3;
+  int64 total = 4;
+}
+
+message AuthResponse {
+  User user = 1;
+  string access_token = 2;
+  int64 expires_in = 3;        // detik
+  string refresh_token = 4;    // hanya dipakai gateway (cookie HttpOnly)
+  int64 refresh_expires_in = 5; // detik
+}

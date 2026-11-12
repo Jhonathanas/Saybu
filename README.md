@@ -24,8 +24,8 @@ Toko online buah & sayur untuk usaha keluarga — sekaligus proyek latihan
 | Milestone | Status |
 |---|---|
 | M0 Fondasi | ✅ selesai |
-| M1 Auth & gateway | ⬜ berikutnya |
-| M2 Katalog | ⬜ |
+| M1 Auth & gateway | ✅ selesai |
+| M2 Katalog | ⬜ berikutnya |
 | M3 Order + Kafka | ⬜ |
 | M4 Pembayaran & Telegram | ⬜ |
 | M5–M7 | ⬜ |
@@ -37,16 +37,19 @@ Toko online buah & sayur untuk usaha keluarga — sekaligus proyek latihan
 - **Docker** + Compose v2
 - **GNU Make**
 - **buf** dan `protoc-gen-go`/`protoc-gen-go-grpc` (hanya bila mengubah `.proto`)
-- Node 20+ (dibutuhkan mulai M1 untuk frontend)
+- **Node 20+** (Linux) — untuk frontend. Di WSL, pastikan `node` menunjuk Node Linux,
+  bukan `node.exe` Windows, agar paket native (esbuild) berjalan.
 
 ## Mulai cepat
 
 ```bash
 cp .env.example .env
 make up          # Postgres, Kafka, Kafka UI
-make test        # unit test
-make test-integration  # test Kafka (infra harus hidup)
+make migrate     # migrasi database
+make test        # unit test Go
+make test-integration  # test integrasi (infra harus hidup)
 make dev         # jalankan semua service Go
+make dev-frontend  # terminal lain: frontend di :5173
 ```
 
 Cek kesehatan:
@@ -61,7 +64,7 @@ Buka:
 
 - Gateway: <http://localhost:8081/api/v1/version>
 - Kafka UI: <http://localhost:8090>
-- Frontend (M1+): <http://localhost:5173>
+- Frontend: <http://localhost:5173> (toko) dan <http://localhost:5173/admin> (panel)
 
 ## Port
 
@@ -89,7 +92,7 @@ backend/
 ├── gen/                    # hasil buf generate (di-commit)
 ├── proto/saybu/<svc>/v1/
 └── services/<svc>/cmd/main.go
-frontend/                   # React SPA (M1+)
+frontend/                   # React SPA (Vite + TS + Tailwind)
 infra/                      # postgres init, script kafka, dev runner
 docs/                       # dokumen proyek
 ```
@@ -100,10 +103,10 @@ docs/                       # dokumen proyek
 make help
 make up / down / logs / ps
 make proto
-make migrate / seed
+make migrate / migrate-down / seed
 make dev / dev-frontend
-make test / test-integration
-make lint / fmt / build
+make test / test-frontend / test-integration
+make lint / lint-frontend / fmt / build
 make clean        # hapus binary + volume (data hilang!)
 ```
 

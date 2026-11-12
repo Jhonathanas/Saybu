@@ -72,11 +72,19 @@ func LoggingUnary(log *slog.Logger) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		start := time.Now()
 		resp, err := handler(ctx, req)
-		log.Info("grpc request",
+		code := status.Code(err)
+		attrs := []any{
 			"request_id", telemetry.RequestID(ctx),
 			"method", info.FullMethod,
-			"code", status.Code(err).String(),
-			"duration_ms", time.Since(start).Milliseconds())
+			"code", code.String(),
+			"duration_ms", time.Since(start).Milliseconds(),
+		}
+		// Detail error hanya dicatat untuk kegagalan tak terduga agar bisa
+		// didiagnosis; pesan domain tetap rapi di sisi klien.
+		if code == codes.Internal || code == codes.Unknown {
+			attrs = append(attrs, "error", err)
+		}
+		log.Info("grpc request", attrs...)
 		return resp, err
 	}
 }

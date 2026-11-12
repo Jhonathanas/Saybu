@@ -6,7 +6,7 @@
 | Base URL lokal | `http://localhost:8081/api/v1` |
 | Base URL produksi | `https://<domain>/api/v1` |
 | Format | JSON (`application/json`), kecuali upload `multipart/form-data` |
-| Terakhir diperbarui | 2026-11-11 |
+| Terakhir diperbarui | 2026-11-12 |
 
 > Dokumen ini adalah **kontrak**. Setiap perubahan wajib disertai pembaruan di sini + test.
 
@@ -566,3 +566,16 @@ Envelope (semua event):
 | Endpoint baca | 120 / menit per IP |
 
 Respons 429 menyertakan `Retry-After`.
+
+---
+
+## 11. Operasional (non-API publik)
+
+| Endpoint | Port | Keterangan |
+|---|---|---|
+| `GET /healthz` | gateway `8081`, admin `9101`–`9105`, notification `8086` | Liveness |
+| `GET /readyz` | sama | Readiness (DB/Kafka/downstream) |
+| `GET /metrics` | sama | Prometheus |
+| `GET /api/v1/version` | gateway `8081` | Nama service, versi, env |
+
+Endpoint ini tidak untuk browser dan tidak memakai envelope `data`/`meta`.

@@ -1,0 +1,39 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans:
+    'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  --color-brand-50: #f2fbf3;
+  --color-brand-100: #e0f6e3;
+  --color-brand-200: #c2ecc8;
+  --color-brand-300: #92dca0;
+  --color-brand-400: #5bc472;
+  --color-brand-500: #34a853;
+  --color-brand-600: #268a42;
+  --color-brand-700: #216e37;
+  --color-brand-800: #1f582f;
+  --color-brand-900: #1b4929;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-stone-50 text-stone-800 antialiased;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand-500;
+  }
+}
+
+@layer components {
+  /* Target sentuh minimal 44 px (mobile-first). */
+  .tap-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}

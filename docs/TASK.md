@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Versi | 1.0 |
-| Terakhir diperbarui | 2026-11-11 |
+| Terakhir diperbarui | 2026-11-12 |
 | Cara pakai | Centang `[x]` saat selesai. Satu task = satu PR/commit yang bisa diuji. |
 
 **Legenda status:** `[ ]` belum · `[~]` sedang dikerjakan · `[x]` selesai · `[!]` terblokir
@@ -15,7 +15,7 @@
 | Milestone | Fokus | Task | Selesai | Status |
 |---|---|---|---|---|
 | M0 | Fondasi | 12 | 12 | ✅ |
-| M1 | Auth & gateway | 13 | 0 | ⬜ |
+| M1 | Auth & gateway | 13 | 13 | ✅ |
 | M2 | Katalog | 15 | 0 | ⬜ |
 | M3 | Ongkir & order | 16 | 0 | ⬜ |
 | M4 | Pembayaran & notifikasi | 14 | 0 | ⬜ |
@@ -57,21 +57,35 @@
 
 | ID | Task | Acceptance | Est |
 |---|---|---|---|
-| M1-01 | `[ ]` Proto `auth.v1` + generate | `make proto` sukses, tidak ada breaking change | 0.5 j |
-| M1-02 | `[ ]` Migrasi `saybu_auth`: `users`, `refresh_tokens` + index unik | Migrasi naik/turun bersih | 0.5 j |
-| M1-03 | `[ ]` `sqlc` query auth + repo | Test repo dengan testcontainers | 1 j |
-| M1-04 | `[ ]` Domain auth: validasi HP/email, aturan password, argon2id | Unit test ≥ 80% | 1 j |
-| M1-05 | `[ ]` Usecase register/login/refresh rotasi/logout + deteksi reuse | Test reuse token mencabut semua sesi | 1.5 j |
-| M1-06 | `[ ]` gRPC server auth + interceptor | Test `bufconn` | 1 j |
-| M1-07 | `[ ]` Gateway: chi router, config, CORS, request-id, error mapping | Test mapping error | 1 j |
-| M1-08 | `[ ]` JWT middleware + klien gRPC per service (connection reuse) | Token invalid → 401, role kurang → 403 | 1 j |
-| M1-09 | `[ ]` Handler REST auth + `/me` + rate limit login | Sesuai `API_SPEC.md` §2 | 1 j |
-| M1-10 | `[ ]` Scaffold frontend: Vite, TS, Tailwind, shadcn, router, QueryClient | `npm run dev` tampil | 1 j |
-| M1-11 | `[ ]` API client + auth context + auto refresh 401 | Refresh hanya sekali, tidak loop | 1.5 j |
-| M1-12 | `[ ]` Halaman login & register + validasi form | Bisa daftar & masuk | 1.5 j |
-| M1-13 | `[ ]` Guard `/admin` + layout dasar admin | Customer ditolak, admin masuk | 0.5 j |
+| M1-01 | `[x]` Proto `auth.v1` + generate | `make proto` sukses, tidak ada breaking change | 0.5 j |
+| M1-02 | `[x]` Migrasi `saybu_auth`: `users`, `refresh_tokens` + index unik | Migrasi naik/turun bersih | 0.5 j |
+| M1-03 | `[x]` Repo auth (pgx) — `sqlc` ditunda | Test repo integrasi lulus | 1 j |
+| M1-04 | `[x]` Domain auth: validasi HP/email, aturan password, argon2id | Unit test ≥ 80% | 1 j |
+| M1-05 | `[x]` Usecase register/login/refresh rotasi/logout + deteksi reuse | Test reuse token mencabut semua sesi | 1.5 j |
+| M1-06 | `[x]` gRPC server auth + interceptor | Test `bufconn` | 1 j |
+| M1-07 | `[x]` Gateway: chi router, config, CORS, request-id, error mapping | Test mapping error | 1 j |
+| M1-08 | `[x]` JWT middleware + klien gRPC per service (connection reuse) | Token invalid → 401, role kurang → 403 | 1 j |
+| M1-09 | `[x]` Handler REST auth + `/me` + rate limit login | Sesuai `API_SPEC.md` §2 | 1 j |
+| M1-10 | `[x]` Scaffold frontend: Vite, TS, Tailwind, router, QueryClient | `npm run dev` tampil | 1 j |
+| M1-11 | `[x]` API client + auth context + auto refresh 401 | Refresh hanya sekali, tidak loop | 1.5 j |
+| M1-12 | `[x]` Halaman login & register + validasi form | Bisa daftar & masuk | 1.5 j |
+| M1-13 | `[x]` Guard `/admin` + layout dasar admin | Customer ditolak, admin masuk | 0.5 j |
 
-**Gate M1:** register → login → refresh → logout berjalan; `/admin` terlindungi; test & CI hijau.
+**Gate M1:** register → login → refresh → logout berjalan; `/admin` terlindungi; test & CI hijau. ✅
+
+**Catatan penyimpangan M1:**
+- **`sqlc` ditunda** (M1-03): repo auth memakai `pgx` langsung agar M1 cepat jalan; `sqlc` akan
+  diperkenalkan saat katalog (M2) bila pola query sudah stabil.
+- **Test repo memakai Postgres dev (DSN), belum `testcontainers`**: cukup untuk lokal & CI saat ini;
+  migrasi ke `testcontainers-go` direncanakan pada M3 saat CI butuh DB terisolasi.
+- **shadcn/ui ditunda**: komponen UI ditulis manual di `src/components/ui` (Tailwind 4). shadcn bisa
+  ditambahkan tanpa mengubah struktur.
+- **buf lint**: pesan bersama `User`/`AuthResponse` memakai pengecualian `RPC_REQUEST_RESPONSE_UNIQUE`,
+  `RPC_REQUEST_STANDARD_NAME`, `RPC_RESPONSE_STANDARD_NAME` di `buf.yaml`.
+- **Frontend memakai proxy Vite** (`/api` → gateway) agar cookie refresh same-origin saat dev.
+- **Bug ditemukan & diperbaiki saat verifikasi E2E**: `RotateRefreshToken` mengisi `user_id` dari
+  `newToken.UserID` (kosong) alih-alih dari token lama; pencarian identifier email memakai `citext`
+  tanpa cast sehingga case-sensitive saat parameter di-infer `text`. Keduanya ditutup test.
 
 ---
 
@@ -235,3 +249,6 @@
 | 2026-11-11 | Keputusan: Kafka, gRPC internal, React SPA, admin satu app, deploy lokal dulu |
 | 2026-11-11 | **M0 selesai.** Toolchain Linux Go 1.26 + buf 1.75 dipasang; infra sehat (5 DB, 8 topic); 7 service lulus health/ready; unit + integrasi Kafka hijau |
 | 2026-11-11 | Penyimpangan: satu Go module (bukan go.work), Postgres host 5433, Kafka UI 8090, Go 1.26 |
+| 2026-11-12 | **M1 selesai.** Auth (register/login/refresh rotasi+reuse/logout), gateway REST + JWT + rate limit, frontend auth (login/register/guard admin). Verifikasi E2E manual via curl lulus; unit + integrasi (repo) hijau |
+| 2026-11-12 | Penyimpangan M1: sqlc ditunda (pgx langsung), test repo pakai Postgres dev (belum testcontainers), shadcn ditunda |
+| 2026-11-12 | Bug diperbaiki saat verifikasi: `user_id` kosong pada rotasi refresh token; pencarian email `citext` case-sensitive. Keduanya kini ada test |

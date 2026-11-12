@@ -27,7 +27,8 @@ event lewat Kafka, database Postgres terpisah per service.
 
 - [x] Dokumen perencanaan lengkap
 - [x] **M0 Fondasi** — infra, `pkg`, proto, 7 skeleton service, Makefile, CI
-- [ ] M1 Auth · M2 Katalog · M3 Order · M4 Payment · M5 Lengkap · M6 Observability · M7 Deploy
+- [x] **M1 Auth & Gateway** — auth service (JWT + refresh rotasi), gateway REST, frontend login/register + guard admin
+- [ ] M2 Katalog · M3 Order · M4 Payment · M5 Lengkap · M6 Observability · M7 Deploy
 
 > Saat mulai bekerja, perbarui bagian ini dan centang task terkait di `docs/TASK.md`.
 
