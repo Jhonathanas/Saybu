@@ -4,6 +4,7 @@ import { useAuth } from '@/features/auth/AuthProvider'
 
 const navItems = [
   { to: '/admin', label: 'Ringkasan', end: true },
+  { to: '/admin/produk', label: 'Produk', end: false },
   { to: '/admin/pengguna', label: 'Pengguna', end: false },
 ]
 

@@ -36,6 +36,25 @@ export function formatDate(value: string | number | Date): string {
   return date ? dateOnly.format(date) : '—'
 }
 
+const qtyNumber = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 3 })
+
+/**
+ * Format jumlah sesuai satuan. Untuk `kg`, nilai disimpan dalam gram
+ * (satuan terkecil) dan ditampilkan sebagai kilogram.
+ */
+export function formatQty(unit: string, qty: number): string {
+  if (!Number.isFinite(qty)) return '—'
+  if (unit === 'kg') {
+    return `${qtyNumber.format(qty / 1000)} kg`
+  }
+  return `${qtyNumber.format(qty)} ${unit}`
+}
+
+/** Label harga per satuan, mis. "Rp18.000 / kg". */
+export function formatPricePerUnit(price: number, unit: string): string {
+  return `${formatIDR(price)} / ${unit}`
+}
+
 function toDate(value: string | number | Date): Date | null {
   const date = value instanceof Date ? value : new Date(value)
   return Number.isNaN(date.getTime()) ? null : date

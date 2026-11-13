@@ -1,10 +1,12 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router'
 import { Button } from '@/components/ui/Button'
 import { useAuth } from '@/features/auth/AuthProvider'
+import { useCart } from '@/features/cart/store'
 
 export function StoreLayout() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const cartCount = useCart((s) => s.lines.length)
 
   async function handleLogout() {
     await logout()
@@ -29,6 +31,36 @@ export function StoreLayout() {
               }
             >
               Beranda
+            </NavLink>
+
+            <NavLink
+              to="/produk"
+              className={({ isActive }) =>
+                `tap-target inline-flex items-center rounded-lg px-3 ${
+                  isActive ? 'text-brand-700' : 'text-stone-600 hover:bg-stone-100'
+                }`
+              }
+            >
+              Produk
+            </NavLink>
+
+            <NavLink
+              to="/keranjang"
+              aria-label={
+                cartCount > 0 ? `Keranjang, ${cartCount} jenis produk` : 'Keranjang'
+              }
+              className={({ isActive }) =>
+                `tap-target relative inline-flex items-center rounded-lg px-3 ${
+                  isActive ? 'text-brand-700' : 'text-stone-600 hover:bg-stone-100'
+                }`
+              }
+            >
+              Keranjang
+              {cartCount > 0 && (
+                <span className="ml-1 inline-flex min-w-5 items-center justify-center rounded-full bg-brand-600 px-1.5 text-xs font-semibold text-white">
+                  {cartCount}
+                </span>
+              )}
             </NavLink>
 
             {user ? (

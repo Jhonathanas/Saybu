@@ -155,6 +155,10 @@ Cabut refresh token aktif, hapus cookie. **204**.
 
 Query: `category` (slug), `q` (cari nama), `sort` = `newest|price_asc|price_desc`, `page`, `limit`.
 
+Hanya produk aktif yang dikembalikan. Untuk satuan `kg`, `stock` adalah jumlah dalam **gram**
+(satuan terkecil); `price` tetap harga per kg. Satuan lain (`ikat`, `pcs`, `buah`, `paket`)
+menyimpan stok per satuan.
+
 **200**
 ```json
 {
@@ -169,6 +173,7 @@ Query: `category` (slug), `q` (cari nama), `sort` = `newest|price_asc|price_desc
       "price": 5000,
       "stock": 40,
       "min_qty": 1,
+      "step_qty": 1,
       "is_available": true,
       "images": ["/uploads/2026/11/0192....jpg"]
     }
@@ -361,9 +366,27 @@ Semua endpoint `/admin/*` butuh role `admin` (401/403 bila tidak).
 
 **201** → objek produk admin (termasuk `stock_qty`, `is_active`).
 
+Bentuk objek produk admin (dipakai §7.1–§7.4):
+
+```json
+{
+  "id": "0192...", "slug": "bayam-segar", "name": "Bayam Segar",
+  "category": { "id": "...", "name": "Sayur", "slug": "sayur" }, "category_id": "...",
+  "description": "Bayam hijau segar panen pagi.",
+  "unit": "ikat", "price": 5000, "stock_qty": 40,
+  "min_qty": 1, "step_qty": 1, "is_active": true,
+  "images": ["/uploads/2026/11/....jpg"],
+  "created_at": "2026-11-13T07:50:17+07:00", "updated_at": "2026-11-13T07:50:17+07:00"
+}
+```
+
+`slug` boleh dikosongkan saat create; server membuatnya dari `name` dan menjamin keunikan.
+Untuk satuan `kg`, `price` per kg dan `stock_qty`/`qty` dalam gram.
+
 ### 7.2 `PATCH /admin/products/{id}`
 
 Field parsial; hanya field yang dikirim yang diubah. `price` dan `stock_qty` boleh sekaligus.
+Mengirim `images` akan **mengganti** seluruh daftar gambar.
 
 ### 7.3 `PATCH /admin/products/{id}/stock`
 
@@ -378,20 +401,27 @@ Soft delete (`is_active=false`). **204**.
 
 ### 7.5 `POST /admin/uploads`
 
-`multipart/form-data` field `file`. **201** → `{ "data": { "url": "/uploads/2026/11/uuid.jpg" } }`.
+`multipart/form-data` field `file`. Tipe JPG/PNG/WEBP dan ≤ 5 MB (default) divalidasi server.
+**201** → `{ "data": { "url": "/uploads/2026/11/uuid.jpg" } }`. **400** bila tipe/ukuran tidak valid.
 
-### 7.6 `GET /admin/orders`
+### 7.6 `GET /admin/products`
+
+Daftar produk untuk panel admin, **termasuk produk nonaktif** (berbeda dari §3.2).
+Query: `category` (slug), `q` (cari nama), `sort`, `page`, `limit`. Respons memakai bentuk
+objek produk admin di §7.1.
+
+### 7.7 `GET /admin/orders`
 
 Query: `status`, `date_from`, `date_to`, `q`, `page`, `limit`.
 
-### 7.7 `PATCH /admin/orders/{id}/status`
+### 7.8 `PATCH /admin/orders/{id}/status`
 
 ```json
 { "status": "PREPARING", "note": "Sedang disiapkan" }
 ```
 Transisi divalidasi. **409** bila ilegal.
 
-### 7.8 `GET /admin/stats/today`
+### 7.9 `GET /admin/stats/today`
 
 ```json
 {
@@ -404,7 +434,7 @@ Transisi divalidasi. **409** bila ilegal.
 }
 ```
 
-### 7.9 Zona ongkir (admin)
+### 7.10 Zona ongkir (admin)
 
 - `POST /admin/shipping/zones`
 - `PATCH /admin/shipping/zones/{id}`
@@ -442,6 +472,7 @@ service CatalogService {
   rpc CreateProduct(CreateProductRequest) returns (Product);
   rpc UpdateProduct(UpdateProductRequest) returns (Product);
   rpc SetStock(SetStockRequest) returns (Product);
+  rpc DeleteProduct(DeleteProductRequest) returns (google.protobuf.Empty);
   rpc CheckStock(CheckStockRequest) returns (CheckStockResponse);
   rpc ReserveStock(ReserveStockRequest) returns (ReserveStockResponse);
   rpc ReleaseStock(ReleaseStockRequest) returns (google.protobuf.Empty);
@@ -541,16 +572,20 @@ Envelope (semua event):
 
 ### 9.3 `catalog.events.v1`
 
+Semua event ditulis lewat outbox pada transaksi yang sama (AGENTS.md §3.4).
+
 ```jsonc
-// stock.low
+// product.updated — create/update/soft-delete produk
+{ "product_id": "...", "name": "Tomat", "slug": "tomat-merah", "price": 12000, "unit": "kg", "is_active": true }
+
+// stock.low — hanya saat stok melewati (turun di bawah) low_stock_threshold
 { "product_id": "...", "name": "Tomat", "remaining": 3, "unit": "kg", "threshold": 5 }
 
-// stock.released
+// stock.released — direncanakan M3 (saat pelepasan reservasi pesanan)
 { "order_id": "...", "items": [{ "product_id": "...", "qty": 500 }] }
-
-// product.updated
-{ "product_id": "...", "name": "Tomat", "price": 12000, "is_active": true }
 ```
+
+Untuk satuan `kg`, `remaining`/`qty` dalam gram. `stock.released` belum dipancarkan pada M2.
 
 ---
 

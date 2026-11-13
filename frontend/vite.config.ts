@@ -19,6 +19,11 @@ export default defineConfig({
         target: process.env.VITE_PROXY_TARGET ?? 'http://localhost:8081',
         changeOrigin: true,
       },
+      // Gambar produk dilayani gateway dari disk pada /uploads.
+      '/uploads': {
+        target: process.env.VITE_PROXY_TARGET ?? 'http://localhost:8081',
+        changeOrigin: true,
+      },
     },
   },
   test: {

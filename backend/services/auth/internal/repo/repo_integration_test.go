@@ -35,7 +35,8 @@ func TestRepoIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer pool.Close()
+	// Daftarkan lewat t.Cleanup agar pool baru ditutup setelah cleanup data.
+	t.Cleanup(pool.Close)
 	if err := pool.Ping(ctx); err != nil {
 		t.Skipf("postgres tidak tersedia: %v", err)
 	}

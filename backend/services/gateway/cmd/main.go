@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -16,11 +17,13 @@ import (
 	"google.golang.org/grpc/health/grpc_health_v1"
 
 	authv1 "saybu/gen/saybu/auth/v1"
+	catalogv1 "saybu/gen/saybu/catalog/v1"
 	"saybu/pkg/authn"
 	"saybu/pkg/config"
 	"saybu/pkg/grpcx"
 	"saybu/pkg/httpx"
 	logpkg "saybu/pkg/logger"
+	"saybu/pkg/storage"
 	"saybu/pkg/telemetry"
 	"saybu/services/gateway/internal/authmw"
 	"saybu/services/gateway/internal/handlers"
@@ -53,6 +56,31 @@ func main() {
 	authClient := authv1.NewAuthServiceClient(authConn)
 	authHealth := grpc_health_v1.NewHealthClient(authConn)
 
+	catalogConn, err := grpcx.Dial(config.Get("CATALOG_GRPC_ADDR", "localhost:50052"))
+	if err != nil {
+		log.Error("koneksi catalog gagal", "error", err)
+		os.Exit(1)
+	}
+	defer catalogConn.Close()
+
+	catalogClient := catalogv1.NewCatalogServiceClient(catalogConn)
+	catalogHealth := grpc_health_v1.NewHealthClient(catalogConn)
+
+	uploads, err := storage.NewDisk(
+		config.Get("UPLOAD_DIR", "./data/uploads"),
+		config.Get("UPLOAD_URL_PREFIX", "/uploads"),
+	)
+	if err != nil {
+		log.Error("inisialisasi penyimpanan unggahan gagal", "error", err)
+		os.Exit(1)
+	}
+	catalogHandler := handlers.NewCatalog(
+		catalogClient,
+		log,
+		uploads,
+		config.Int64("UPLOAD_MAX_BYTES", 5<<20),
+	)
+
 	cookieSecure := config.Bool("COOKIE_SECURE", config.Get("APP_ENV", "development") == "production")
 	authHandler := handlers.NewAuth(authClient, log, handlers.CookieConfig{
 		Name:   "saybu_rt",
@@ -70,20 +98,41 @@ func main() {
 	r.Use(httpx.CORS(config.List("GATEWAY_CORS_ORIGINS", []string{"http://localhost:5173"})))
 
 	r.Get("/healthz", httpx.Live)
-	r.Get("/readyz", httpx.Ready(httpx.NamedCheck{
-		Name: "auth",
-		Check: func(ctx context.Context) error {
-			resp, err := authHealth.Check(ctx, &grpc_health_v1.HealthCheckRequest{Service: "auth"})
-			if err != nil {
-				return err
-			}
-			if resp.GetStatus() != grpc_health_v1.HealthCheckResponse_SERVING {
-				return fmt.Errorf("status auth: %s", resp.GetStatus())
-			}
-			return nil
+	r.Get("/readyz", httpx.Ready(
+		httpx.NamedCheck{
+			Name: "auth",
+			Check: func(ctx context.Context) error {
+				resp, err := authHealth.Check(ctx, &grpc_health_v1.HealthCheckRequest{Service: "auth"})
+				if err != nil {
+					return err
+				}
+				if resp.GetStatus() != grpc_health_v1.HealthCheckResponse_SERVING {
+					return fmt.Errorf("status auth: %s", resp.GetStatus())
+				}
+				return nil
+			},
 		},
-	}))
+		httpx.NamedCheck{
+			Name: "catalog",
+			Check: func(ctx context.Context) error {
+				resp, err := catalogHealth.Check(ctx, &grpc_health_v1.HealthCheckRequest{Service: "catalog"})
+				if err != nil {
+					return err
+				}
+				if resp.GetStatus() != grpc_health_v1.HealthCheckResponse_SERVING {
+					return fmt.Errorf("status catalog: %s", resp.GetStatus())
+				}
+				return nil
+			},
+		},
+	))
 	r.Handle("/metrics", metrics.Handler())
+
+	// Gambar produk dilayani langsung dari disk (M7 bisa pindah ke object storage/CDN).
+	r.Handle(config.Get("UPLOAD_URL_PREFIX", "/uploads")+"/*", http.StripPrefix(
+		config.Get("UPLOAD_URL_PREFIX", "/uploads")+"/",
+		noDirListing(http.FileServer(http.Dir(uploads.Dir()))),
+	))
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/version", func(w http.ResponseWriter, req *http.Request) {
@@ -99,6 +148,10 @@ func main() {
 		r.Post("/auth/refresh", authHandler.Refresh)
 		r.Post("/auth/logout", authHandler.Logout)
 
+		r.Get("/categories", catalogHandler.ListCategories)
+		r.Get("/products", catalogHandler.ListProducts)
+		r.Get("/products/{slug}", catalogHandler.GetProduct)
+
 		r.Group(func(r chi.Router) {
 			r.Use(authmw.Authenticate(tokens))
 			r.Get("/me", authHandler.Me)
@@ -106,6 +159,13 @@ func main() {
 			r.Route("/admin", func(r chi.Router) {
 				r.Use(authmw.RequireRole("admin"))
 				r.Get("/users", authHandler.ListUsers)
+
+				r.Get("/products", catalogHandler.AdminListProducts)
+				r.Post("/products", catalogHandler.CreateProduct)
+				r.Patch("/products/{id}", catalogHandler.UpdateProduct)
+				r.Patch("/products/{id}/stock", catalogHandler.SetStock)
+				r.Delete("/products/{id}", catalogHandler.DeleteProduct)
+				r.Post("/uploads", catalogHandler.Upload)
 			})
 		})
 	})
@@ -138,4 +198,15 @@ func main() {
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		log.Error("gateway shutdown gagal", "error", err)
 	}
+}
+
+// noDirListing menolak permintaan ke direktori (mencegah daftar isi folder).
+func noDirListing(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/") {
+			http.NotFound(w, r)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }

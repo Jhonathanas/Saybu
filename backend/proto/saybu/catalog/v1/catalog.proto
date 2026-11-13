@@ -1,0 +1,159 @@
+syntax = "proto3";
+
+package saybu.catalog.v1;
+
+import "google/protobuf/empty.proto";
+
+option go_package = "saybu/gen/saybu/catalog/v1;catalogv1";
+
+// CatalogService mengelola kategori, produk, harga, dan stok.
+//
+// Endpoint baca (ListCategories, ListProducts, GetProduct) dipakai publik.
+// Endpoint tulis dipakai panel admin lewat gateway.
+service CatalogService {
+  rpc ListCategories(ListCategoriesRequest) returns (ListCategoriesResponse);
+
+  rpc ListProducts(ListProductsRequest) returns (ListProductsResponse);
+  rpc GetProduct(GetProductRequest) returns (Product);
+  rpc CreateProduct(CreateProductRequest) returns (Product);
+  rpc UpdateProduct(UpdateProductRequest) returns (Product);
+  rpc SetStock(SetStockRequest) returns (Product);
+  rpc DeleteProduct(DeleteProductRequest) returns (google.protobuf.Empty);
+
+  // Reservasi stok dipakai order-service saat checkout (M3).
+  rpc CheckStock(CheckStockRequest) returns (CheckStockResponse);
+  rpc ReserveStock(ReserveStockRequest) returns (ReserveStockResponse);
+  rpc ReleaseStock(ReleaseStockRequest) returns (google.protobuf.Empty);
+}
+
+message Category {
+  string id = 1;
+  string name = 2;
+  string slug = 3;
+  int32 sort = 4;
+  bool is_active = 5;
+}
+
+message Product {
+  string id = 1;
+  string slug = 2;
+  string name = 3;
+  Category category = 4;
+  string description = 5;
+  // unit: kg | ikat | pcs | buah | paket. Untuk kg, stok & qty dalam gram.
+  string unit = 6;
+  int64 price = 7;     // harga per unit, rupiah penuh
+  int64 stock = 8;     // satuan terkecil (gram untuk kg)
+  int64 min_qty = 9;
+  int64 step_qty = 10;
+  bool is_active = 11;
+  repeated string images = 12;
+  string created_at = 13; // RFC3339
+  string updated_at = 14; // RFC3339
+}
+
+message ListCategoriesRequest {
+  bool include_inactive = 1;
+}
+
+message ListCategoriesResponse {
+  repeated Category categories = 1;
+}
+
+message ListProductsRequest {
+  string category_slug = 1;
+  string query = 2;
+  string sort = 3;            // newest | price_asc | price_desc
+  int32 page = 4;
+  int32 limit = 5;
+  bool include_inactive = 6;  // hanya admin
+}
+
+message ListProductsResponse {
+  repeated Product products = 1;
+  int32 page = 2;
+  int32 limit = 3;
+  int64 total = 4;
+}
+
+message GetProductRequest {
+  string id = 1;
+  string slug = 2;
+  bool include_inactive = 3;
+}
+
+message CreateProductRequest {
+  string name = 1;
+  string slug = 2;
+  string category_id = 3;
+  string description = 4;
+  string unit = 5;
+  int64 price = 6;
+  int64 stock = 7;
+  int64 min_qty = 8;
+  int64 step_qty = 9;
+  bool is_active = 10;
+  repeated string images = 11;
+}
+
+// UpdateProductRequest memakai optional agar field yang tidak dikirim tidak diubah.
+message UpdateProductRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string slug = 3;
+  optional string category_id = 4;
+  optional string description = 5;
+  optional string unit = 6;
+  optional int64 price = 7;
+  optional int64 min_qty = 8;
+  optional int64 step_qty = 9;
+  optional bool is_active = 10;
+  repeated string images = 11;
+  bool replace_images = 12;
+}
+
+message SetStockRequest {
+  string product_id = 1;
+  string mode = 2; // set | adjust
+  int64 qty = 3;
+}
+
+message DeleteProductRequest {
+  string id = 1;
+}
+
+message StockItem {
+  string product_id = 1;
+  int64 qty = 2;
+}
+
+message CheckStockRequest {
+  repeated StockItem items = 1;
+}
+
+message StockStatus {
+  string product_id = 1;
+  string name = 2;
+  int64 requested = 3;
+  int64 available = 4;
+  bool ok = 5;
+}
+
+message CheckStockResponse {
+  bool all_ok = 1;
+  repeated StockStatus items = 2;
+}
+
+message ReserveStockRequest {
+  string order_id = 1;
+  repeated StockItem items = 2;
+}
+
+message ReserveStockResponse {
+  bool reserved = 1;
+  repeated StockStatus insufficient = 2;
+}
+
+message ReleaseStockRequest {
+  string order_id = 1;
+}

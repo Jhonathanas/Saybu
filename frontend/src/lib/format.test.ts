@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatDate, formatDateTime, formatIDR } from './format'
+import { formatDate, formatDateTime, formatIDR, formatPricePerUnit, formatQty } from './format'
 
 describe('formatIDR', () => {
   it('memformat rupiah tanpa desimal', () => {
@@ -33,5 +33,26 @@ describe('formatDateTime', () => {
 describe('formatDate', () => {
   it('memformat tanggal panjang', () => {
     expect(formatDate('2026-01-02T03:00:00Z')).toContain('2026')
+  })
+})
+
+describe('formatQty', () => {
+  it('menampilkan kg dari nilai gram', () => {
+    expect(formatQty('kg', 1500)).toBe('1,5 kg')
+  })
+
+  it('menampilkan satuan non-kg apa adanya', () => {
+    expect(formatQty('ikat', 3)).toBe('3 ikat')
+  })
+
+  it('memberi tanda hubung untuk nilai tak valid', () => {
+    expect(formatQty('kg', Number.NaN)).toBe('—')
+  })
+})
+
+describe('formatPricePerUnit', () => {
+  it('menyertakan satuan', () => {
+    const label = formatPricePerUnit(18000, 'kg').replace(/\u00a0/g, ' ')
+    expect(label).toBe('Rp 18.000 / kg')
   })
 })

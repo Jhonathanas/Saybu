@@ -37,8 +37,8 @@ migrate: ## Jalankan migrasi semua database (goose up)
 migrate-down: ## Rollback migrasi semua database (goose down)
 	bash infra/scripts/migrate.sh down
 
-seed: ## Isi data contoh (M2+)
-	@echo "Belum ada seed. Ditambahkan pada M2."
+seed: ## Isi data contoh: 2 kategori, 12 produk, 1 admin (idempoten)
+	cd backend && $(GO) run ./cmd/seed
 
 dev: ## Jalankan semua service Go
 	bash infra/scripts/dev.sh

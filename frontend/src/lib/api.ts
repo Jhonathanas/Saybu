@@ -206,3 +206,40 @@ export async function requestWithMeta<T, M = Record<string, unknown>>(
 export function refreshSession(): Promise<string | null> {
   return refreshAccessToken()
 }
+
+async function sendForm(path: string, file: File): Promise<Response> {
+  const form = new FormData()
+  form.append('file', file)
+
+  const headers: Record<string, string> = { Accept: 'application/json' }
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`
+  }
+
+  try {
+    return await fetch(`${API_BASE_URL}${path}`, {
+      method: 'POST',
+      headers,
+      credentials: 'include',
+      body: form,
+    })
+  } catch {
+    throw new ApiError(0, 'NETWORK_ERROR', 'Tidak bisa menghubungi server.')
+  }
+}
+
+/** uploadFile mengirim satu berkas (multipart) dengan penanganan 401 terpusat. */
+export async function uploadFile<T>(path: string, file: File): Promise<T> {
+  let res = await sendForm(path, file)
+  if (res.status === 401) {
+    const token = await refreshAccessToken()
+    if (token) {
+      res = await sendForm(path, file)
+    }
+  }
+  if (!res.ok) {
+    throw await parseError(res)
+  }
+  const body = (await res.json()) as Envelope<T>
+  return body.data
+}

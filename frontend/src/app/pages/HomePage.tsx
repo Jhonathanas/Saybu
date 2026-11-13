@@ -1,9 +1,19 @@
+import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import { Card } from '@/components/ui/Card'
+import { Alert, Spinner } from '@/components/ui/Feedback'
+import { ProductCard } from '@/features/catalog/ProductCard'
+import { listCategories, listProducts } from '@/features/catalog/api'
 import { useAuth } from '@/features/auth/AuthProvider'
 
 export function HomePage() {
   const { user } = useAuth()
+
+  const categories = useQuery({ queryKey: ['categories'], queryFn: listCategories })
+  const featured = useQuery({
+    queryKey: ['products', { page: 1, limit: 6, sort: 'newest' }],
+    queryFn: () => listProducts({ page: 1, limit: 6, sort: 'newest' }),
+  })
 
   return (
     <div className="flex flex-col gap-6">
@@ -15,28 +25,53 @@ export function HomePage() {
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
           <Link
-            to="/daftar"
+            to="/produk"
             className="tap-target inline-flex items-center rounded-lg bg-white px-4 text-sm font-semibold text-brand-700 hover:bg-brand-50"
           >
-            Daftar akun
+            Lihat produk
           </Link>
-          <Link
-            to="/masuk"
-            className="tap-target inline-flex items-center rounded-lg bg-brand-700 px-4 text-sm font-semibold text-white hover:bg-brand-800"
-          >
-            Masuk
-          </Link>
+          {!user && (
+            <Link
+              to="/daftar"
+              className="tap-target inline-flex items-center rounded-lg bg-brand-700 px-4 text-sm font-semibold text-white hover:bg-brand-800"
+            >
+              Daftar akun
+            </Link>
+          )}
         </div>
       </section>
 
-      <Card
-        title="Katalog segera hadir"
-        description="Milestone M2 menambahkan daftar produk, pencarian, dan keranjang belanja."
-      >
-        <p className="text-sm text-stone-600">
-          Saat ini fondasi akun sudah berjalan: daftar, masuk, dan sesi yang aman.
-        </p>
-      </Card>
+      {categories.data && categories.data.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {categories.data.map((c) => (
+            <Link
+              key={c.id}
+              to={`/produk?category=${c.slug}`}
+              className="tap-target inline-flex items-center rounded-full border border-stone-300 bg-white px-4 text-sm text-stone-700 hover:bg-stone-100"
+            >
+              {c.name}
+            </Link>
+          ))}
+        </div>
+      )}
+
+      <section className="flex flex-col gap-3">
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-lg font-semibold text-stone-900">Produk terbaru</h2>
+          <Link to="/produk" className="text-sm text-brand-700 hover:underline">
+            Lihat semua
+          </Link>
+        </div>
+
+        {featured.isLoading && <Spinner label="Memuat produk…" />}
+        {featured.isError && <Alert tone="error">Gagal memuat produk.</Alert>}
+
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {(featured.data?.data ?? []).map((p) => (
+            <ProductCard key={p.id} product={p} />
+          ))}
+        </div>
+      </section>
 
       {user && (
         <Card title={`Halo, ${user.name}`}>

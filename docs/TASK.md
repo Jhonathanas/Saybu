@@ -93,23 +93,44 @@
 
 | ID | Task | Acceptance | Est |
 |---|---|---|---|
-| M2-01 | `[ ]` Proto `catalog.v1` (termasuk `CheckStock`/`ReserveStock`/`ReleaseStock`) | `buf lint` bersih | 0.5 j |
-| M2-02 | `[ ]` Migrasi `saybu_catalog`: `categories`, `products`, `product_images`, `stock_reservations` | Naik/turun bersih | 1 j |
-| M2-03 | `[ ]` `sqlc` query katalog + repo | Test repo | 1 j |
-| M2-04 | `[ ]` Domain katalog: stok, reservasi, aturan harga, slug unik | Unit test | 1 j |
-| M2-05 | `[ ]` Usecase produk (CRUD, set/adjust stok) + validasi | Test usecase | 1.5 j |
-| M2-06 | `[ ]` gRPC server catalog | Test `bufconn` | 1 j |
-| M2-07 | `[ ]` Gateway: endpoint publik kategori & produk + filter/pagination | Sesuai `API_SPEC.md` §3 | 1 j |
-| M2-08 | `[ ]` Gateway: endpoint admin produk + upload gambar (validasi tipe/ukuran) | Upload > 5 MB ditolak | 1.5 j |
-| M2-09 | `[ ]` Seed: 2 kategori + 12 produk + zona + 1 admin | `make seed` idempoten | 1 j |
-| M2-10 | `[ ]` Storefront: home (kategori + produk unggulan) | Mobile rapi 360 px | 1 j |
-| M2-11 | `[ ]` Storefront: daftar produk + filter kategori + pencarian | Filter & cari bekerja | 1.5 j |
-| M2-12 | `[ ]` Storefront: detail produk (galeri, harga, stok, pilih jumlah) | Stok 0 tidak bisa ditambah | 1.5 j |
-| M2-13 | `[ ]` Cart store (Zustand + persist) + badge & halaman keranjang | Bertahan setelah refresh | 1 j |
-| M2-14 | `[ ]` Admin: tabel produk + form create/edit + upload foto + ubah stok | CRUD penuh dari UI | 2 j |
-| M2-15 | `[ ]` Test frontend (Vitest) untuk cart & format uang | `npm test` hijau | 1 j |
+| M2-01 | `[x]` Proto `catalog.v1` (termasuk `CheckStock`/`ReserveStock`/`ReleaseStock`) | `buf lint` bersih | 0.5 j |
+| M2-02 | `[x]` Migrasi `saybu_catalog`: `categories`, `products`, `product_images`, `stock_reservations` | Naik/turun bersih | 1 j |
+| M2-03 | `[x]` Query katalog + repo (pgx langsung; `sqlc` ditunda) | Test repo integrasi lulus | 1 j |
+| M2-04 | `[x]` Domain katalog: stok, reservasi, aturan harga, slug unik | Unit test | 1 j |
+| M2-05 | `[x]` Usecase produk (CRUD, set/adjust stok) + validasi | Test usecase | 1.5 j |
+| M2-06 | `[x]` gRPC server catalog | Test `bufconn` | 1 j |
+| M2-07 | `[x]` Gateway: endpoint publik kategori & produk + filter/pagination | Sesuai `API_SPEC.md` §3 | 1 j |
+| M2-08 | `[x]` Gateway: endpoint admin produk + upload gambar (validasi tipe/ukuran) | Upload > 5 MB ditolak | 1.5 j |
+| M2-09 | `[x]` Seed: 2 kategori + 12 produk + 1 admin (zona ditunda ke M3) | `make seed` idempoten | 1 j |
+| M2-10 | `[x]` Storefront: home (kategori + produk unggulan) | Mobile rapi 360 px | 1 j |
+| M2-11 | `[x]` Storefront: daftar produk + filter kategori + pencarian | Filter & cari bekerja | 1.5 j |
+| M2-12 | `[x]` Storefront: detail produk (galeri, harga, stok, pilih jumlah) | Stok 0 tidak bisa ditambah | 1.5 j |
+| M2-13 | `[x]` Cart store (Zustand + persist) + badge & halaman keranjang | Bertahan setelah refresh | 1 j |
+| M2-14 | `[x]` Admin: tabel produk + form create/edit + upload foto + ubah stok | CRUD penuh dari UI | 2 j |
+| M2-15 | `[x]` Test frontend (Vitest) untuk cart & format uang | `npm test` hijau | 1 j |
 
-**Gate M2:** produk tampil & bisa dicari, admin CRUD + upload jalan, stok tercermin di storefront.
+**Gate M2:** produk tampil & bisa dicari, admin CRUD + upload jalan, stok tercermin di storefront. ✅
+
+**Catatan penyimpangan M2:**
+- **`sqlc` tetap ditunda** (M2-03): repo katalog memakai `pgx` langsung seperti M1. Alasan: `sqlc`
+  belum terpasang dan pola query (`ILIKE`, filter dinamis, upsert gambar) lebih mudah ditulis manual.
+  Rencana: tinjau ulang sebelum M4 bila jumlah query bertambah banyak.
+- **Seed zona ongkir ditunda ke M3** (M2-09): tabel zona baru ada saat M3, jadi seed M2 hanya
+  mengisi kategori, produk, dan admin. Seed idempoten (dijalankan dua kali tidak menduplikasi).
+- **Tidak ada CRUD kategori** di M2: kategori hanya dari seed (sesuai keputusan scope). Endpoint
+  `GET /categories` publik tetap ada.
+- **`GET /admin/products` ditambahkan** (tidak ada di `API_SPEC.md` awal) agar admin dapat melihat
+  produk nonaktif. Bersifat aditif dan sudah didokumentasikan di `API_SPEC.md` §7.6.
+- **Model satuan**: `kg | ikat | pcs | buah | paket`. Untuk `kg`, stok & qty disimpan dalam **gram**
+  (satuan terkecil); harga tetap per kg. Varian produk (mis. ukuran) ditunda.
+- **Penyimpanan gambar**: disk lokal (`UPLOAD_DIR`, default `./data/uploads`) dengan URL publik
+  `/uploads/...`; gateway melayani file statis dan menolak daftar direktori. Object storage/CDN
+  ditunda ke M7.
+- **Proxy Vite ditambah `/uploads`** selain `/api` agar gambar produk tampil saat dev.
+- **Perbaikan bug**: `defer pool.Close()` pada test repo integrasi berjalan lebih dulu daripada
+  `t.Cleanup` sehingga baris uji tidak pernah terhapus; diganti `t.Cleanup(pool.Close)` (auth & katalog).
+- **`typecheck` frontend**: skrip diubah dari `tsc --noEmit` (no-op karena `tsconfig.json` bergaya
+  solusi) menjadi `tsc -b` agar benar-benar memeriksa tipe.
 
 ---
 
@@ -252,3 +273,6 @@
 | 2026-11-12 | **M1 selesai.** Auth (register/login/refresh rotasi+reuse/logout), gateway REST + JWT + rate limit, frontend auth (login/register/guard admin). Verifikasi E2E manual via curl lulus; unit + integrasi (repo) hijau |
 | 2026-11-12 | Penyimpangan M1: sqlc ditunda (pgx langsung), test repo pakai Postgres dev (belum testcontainers), shadcn ditunda |
 | 2026-11-12 | Bug diperbaiki saat verifikasi: `user_id` kosong pada rotasi refresh token; pencarian email `citext` case-sensitive. Keduanya kini ada test |
+| 2026-11-13 | **M2 selesai.** Katalog: proto + migrasi (kategori/produk/gambar/reservasi stok/outbox), domain+repo+usecase+gRPC, gateway publik & admin, upload gambar disk, seed idempoten. Frontend: home, daftar/detail produk, keranjang (Zustand persist), admin CRUD produk. Verifikasi E2E manual via curl lulus; unit + integrasi (repo) + Vitest hijau |
+| 2026-11-13 | Penyimpangan M2: sqlc tetap ditunda (pgx langsung), seed zona ditunda ke M3, tanpa CRUD kategori, `GET /admin/products` ditambahkan, varian produk ditunda |
+| 2026-11-13 | Bug diperbaiki: cleanup test repo integrasi (`defer pool.Close()` → `t.Cleanup`); skrip `typecheck` frontend `tsc --noEmit` (no-op) → `tsc -b` |
