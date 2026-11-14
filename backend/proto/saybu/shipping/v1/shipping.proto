@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+package saybu.shipping.v1;
+
+import "google/protobuf/empty.proto";
+
+option go_package = "saybu/gen/saybu/shipping/v1;shippingv1";
+
+// ShippingService mengelola zona ongkir dan menghitung tarif.
+//
+// ListZones dan Quote dipakai publik (storefront). UpsertZone dan DeleteZone
+// dipakai panel admin lewat gateway.
+service ShippingService {
+  rpc ListZones(ListZonesRequest) returns (ListZonesResponse);
+  rpc Quote(QuoteRequest) returns (QuoteResponse);
+  rpc UpsertZone(UpsertZoneRequest) returns (Zone);
+  rpc DeleteZone(DeleteZoneRequest) returns (google.protobuf.Empty);
+}
+
+// Zone adalah satu wilayah pengiriman dengan tarif tetap.
+message Zone {
+  string id = 1;
+  string name = 2;
+  repeated string areas = 3;          // kelurahan/kecamatan yang tercakup
+  int64 fee = 4;                      // ongkir rupiah penuh
+  int64 free_min_subtotal = 5;        // subtotal minimum agar gratis ongkir (0 = tidak pernah)
+  bool is_active = 6;
+  string created_at = 7;              // RFC3339
+  string updated_at = 8;              // RFC3339
+}
+
+message ListZonesRequest {
+  bool include_inactive = 1;          // hanya admin
+}
+
+message ListZonesResponse {
+  repeated Zone zones = 1;
+}
+
+message QuoteRequest {
+  string zone_id = 1;
+  int64 subtotal = 2;
+}
+
+message QuoteResponse {
+  string zone_id = 1;
+  string zone_name = 2;
+  int64 fee = 3;
+  bool free_shipping = 4;
+  int64 subtotal = 5;
+  int64 total = 6;
+}
+
+// UpsertZoneRequest: id kosong berarti buat zona baru.
+message UpsertZoneRequest {
+  string id = 1;
+  string name = 2;
+  repeated string areas = 3;
+  int64 fee = 4;
+  int64 free_min_subtotal = 5;
+  optional bool is_active = 6;
+}
+
+message DeleteZoneRequest {
+  string id = 1;
+}

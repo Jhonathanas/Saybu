@@ -16,8 +16,8 @@
 |---|---|---|---|---|
 | M0 | Fondasi | 12 | 12 | ✅ |
 | M1 | Auth & gateway | 13 | 13 | ✅ |
-| M2 | Katalog | 15 | 0 | ⬜ |
-| M3 | Ongkir & order | 16 | 0 | ⬜ |
+| M2 | Katalog | 15 | 15 | ✅ |
+| M3 | Ongkir & order | 16 | 2 | 🚧 |
 | M4 | Pembayaran & notifikasi | 14 | 0 | ⬜ |
 | M5 | Kelengkapan | 12 | 0 | ⬜ |
 | M6 | Observability & hardening | 8 | 0 | ⬜ |
@@ -138,8 +138,8 @@
 
 | ID | Task | Acceptance | Est |
 |---|---|---|---|
-| M3-01 | `[ ]` Service `shipping`: proto, migrasi `zones`, repo, domain kuotasi | Unit + repo test | 1.5 j |
-| M3-02 | `[ ]` Gateway: zona publik + quote + CRUD zona admin | Sesuai `API_SPEC.md` §4 | 1 j |
+| M3-01 | `[x]` Service `shipping`: proto, migrasi `zones`, repo, domain kuotasi | Unit + repo test | 1.5 j |
+| M3-02 | `[x]` Gateway: zona publik + quote + CRUD zona admin | Sesuai `API_SPEC.md` §4 | 1 j |
 | M3-03 | `[ ]` Proto `order.v1` + migrasi `orders`, `order_items`, `order_status_history`, `idempotency_keys`, `outbox` | Naik/turun bersih | 1.5 j |
 | M3-04 | `[ ]` Domain order: state machine + validasi transisi | Test semua transisi legal/ilegal | 1.5 j |
 | M3-05 | `[ ]` Usecase checkout: quote ongkir → cek stok → reserve → simpan order → outbox | Test kompensasi saat gagal simpan | 2 j |
@@ -156,6 +156,20 @@
 | M3-16 | `[ ]` Job expire order 24 jam → `order.expired` | Order lama otomatis expired | 1 j |
 
 **Gate M3:** checkout end-to-end membuat order + event Kafka; stok ter-reserve; batal melepas stok; tidak ada oversell.
+
+**Catatan penyimpangan M3 (sejauh ini):**
+- **Zona ongkir punya `UNIQUE(name)`** agar seed bisa idempoten (`INSERT ... ON CONFLICT (name) DO NOTHING`)
+  dan admin tidak membuat zona duplikat. Zona adalah master data sederhana, bukan entitas bisnis.
+- **`DELETE` zona = hard delete**, bukan soft delete. Aman karena order menyimpan **snapshot** nama & tarif
+  ongkir, sehingga menghapus zona tidak mengubah pesanan lama. Untuk sementara, admin bisa menonaktifkan
+  (`is_active=false`) bila ingin menyembunyikan tanpa menghapus.
+- **`GET /shipping/quote` dengan zona tidak dikenal/invalid mengembalikan `422`** (sesuai `API_SPEC.md` §4.2),
+  dipetakan dari gRPC `FailedPrecondition`. UUID tidak valid diperlakukan sebagai "tidak ditemukan" (bukan 500).
+- **Admin `PATCH`/`DELETE` zona tidak dikenal mengembalikan `404`.**
+- **Info rekening transfer statis dari `.env`** (`BANK_NAME`, `BANK_ACCOUNT`, `BANK_HOLDER`) — belum ada tabel
+  rekening; nilai harus di-quote karena mengandung `&` (mis. `"Saybu Buah & Sayur"`).
+- **Seed 4 zona contoh** (`Kec. Sukamaju`, `Kec. Cibaduyut`, `Kec. Dayeuhkolot`, `Ambil di tempat`) — admin dapat
+  mengubah/menambah lewat UI.
 
 ---
 
@@ -276,3 +290,5 @@
 | 2026-11-13 | **M2 selesai.** Katalog: proto + migrasi (kategori/produk/gambar/reservasi stok/outbox), domain+repo+usecase+gRPC, gateway publik & admin, upload gambar disk, seed idempoten. Frontend: home, daftar/detail produk, keranjang (Zustand persist), admin CRUD produk. Verifikasi E2E manual via curl lulus; unit + integrasi (repo) + Vitest hijau |
 | 2026-11-13 | Penyimpangan M2: sqlc tetap ditunda (pgx langsung), seed zona ditunda ke M3, tanpa CRUD kategori, `GET /admin/products` ditambahkan, varian produk ditunda |
 | 2026-11-13 | Bug diperbaiki: cleanup test repo integrasi (`defer pool.Close()` → `t.Cleanup`); skrip `typecheck` frontend `tsc --noEmit` (no-op) → `tsc -b` |
+| 2026-11-14 | **M3 Tahap 1 selesai (M3-01, M3-02).** Service `shipping`: proto `shipping.v1` (`ListZones`/`Quote`/`UpsertZone`/`DeleteZone`), migrasi `zones` (naik/turun bersih), domain kuotasi (gratis bila `subtotal ≥ free_min_subtotal`), repo pgx, gRPC + admin HTTP. Gateway: zona publik, quote, CRUD zona admin. Seed 4 zona contoh idempoten. Verifikasi E2E manual via curl (kuotasi, zona nonaktif tersembunyi dari publik, CRUD admin, 401/404/409/422) lulus; unit + integrasi (repo) hijau |
+| 2026-11-14 | Penyimpangan M3 (tahap 1): zona `UNIQUE(name)` untuk seed idempoten, DELETE = hard delete (order snapshot nama/tarif), quote zona tak dikenal → 422, info rekening statis dari `.env` |

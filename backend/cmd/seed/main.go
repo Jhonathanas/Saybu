@@ -1,11 +1,9 @@
 // Command seed mengisi data contoh Saybu secara idempoten.
 //
 // Aman dijalankan berulang: baris dicari berdasarkan kunci alami (slug
-// kategori/produk, nomor HP admin) lalu diperbarui, bukan diduplikasi.
+// kategori/produk, nomor HP admin, nama zona) lalu diperbarui, bukan diduplikasi.
 //
 //	go run ./cmd/seed
-//
-// Zona ongkir belum di-seed karena tabelnya baru ada di M3.
 package main
 
 import (
@@ -42,6 +40,13 @@ type productSeed struct {
 	stepQty      int64
 }
 
+type zoneSeed struct {
+	name            string
+	areas           []string
+	fee             int64
+	freeMinSubtotal int64
+}
+
 func main() {
 	config.LoadDotEnv()
 	log := logpkg.New("seed", config.Get("LOG_LEVEL", "info"))
@@ -63,6 +68,13 @@ func main() {
 	}
 	defer authPool.Close()
 
+	shippingPool, err := pgxpool.New(ctx, config.MustGet("SHIPPING_DB_DSN"))
+	if err != nil {
+		log.Error("koneksi postgres shipping gagal", "error", err)
+		os.Exit(1)
+	}
+	defer shippingPool.Close()
+
 	cats, err := seedCategories(ctx, catalogPool)
 	if err != nil {
 		log.Error("seed kategori gagal", "error", err)
@@ -78,8 +90,13 @@ func main() {
 		log.Error("seed admin gagal", "error", err)
 		os.Exit(1)
 	}
+	zones, err := seedZones(ctx, shippingPool)
+	if err != nil {
+		log.Error("seed zona ongkir gagal", "error", err)
+		os.Exit(1)
+	}
 
-	log.Info("seed selesai", "kategori", len(cats), "produk", n, "admin", admin)
+	log.Info("seed selesai", "kategori", len(cats), "produk", n, "admin", admin, "zona", zones)
 }
 
 func categories() []categorySeed {
@@ -104,6 +121,46 @@ func products() []productSeed {
 		{"sayur", "Kentang Dieng", "kentang-dieng", "Kentang Dieng empuk, cocok untuk sup dan perkedel.", "kg", 15000, 22000, 250, 250},
 		{"sayur", "Paket Sayur Sop", "paket-sayur-sop", "Paket sayur sop lengkap: wortel, kentang, buncis, seledri.", "paket", 15000, 25, 1, 1},
 	}
+}
+
+// zones mengembalikan contoh zona ongkir (dapat diubah lewat panel admin).
+func zones() []zoneSeed {
+	return []zoneSeed{
+		{name: "Kec. Sukamaju", areas: []string{"Sukamaju", "Sukamulya"}, fee: 10000, freeMinSubtotal: 150000},
+		{name: "Kec. Cibaduyut", areas: []string{"Cibaduyut", "Cibaduyut Kidul"}, fee: 12000, freeMinSubtotal: 150000},
+		{name: "Kec. Dayeuhkolot", areas: []string{"Dayeuhkolot", "Citeureup"}, fee: 15000, freeMinSubtotal: 200000},
+		{name: "Ambil di tempat", areas: []string{"Toko Saybu"}, fee: 0, freeMinSubtotal: 0},
+	}
+}
+
+// seedZones meng-upsert zona ongkir berdasarkan nama dan mengembalikan jumlahnya.
+func seedZones(ctx context.Context, pool *pgxpool.Pool) (int, error) {
+	rows := zones()
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		return 0, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	for _, z := range rows {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO zones (id, name, areas, fee, free_min_subtotal, is_active)
+			VALUES ($1, $2, $3, $4, $5, true)
+			ON CONFLICT (name) DO UPDATE SET
+				areas             = EXCLUDED.areas,
+				fee               = EXCLUDED.fee,
+				free_min_subtotal = EXCLUDED.free_min_subtotal,
+				is_active         = true,
+				updated_at        = now()
+		`, ids.New(), z.name, z.areas, z.fee, z.freeMinSubtotal); err != nil {
+			return 0, fmt.Errorf("zona %s: %w", z.name, err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return 0, err
+	}
+	return len(rows), nil
 }
 
 // seedCategories meng-upsert kategori dan mengembalikan peta slug -> id.

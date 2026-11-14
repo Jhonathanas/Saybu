@@ -436,11 +436,15 @@ Transisi divalidasi. **409** bila ilegal.
 
 ### 7.10 Zona ongkir (admin)
 
+- `GET /admin/shipping/zones` — termasuk zona nonaktif
 - `POST /admin/shipping/zones`
 - `PATCH /admin/shipping/zones/{id}`
 - `DELETE /admin/shipping/zones/{id}`
 
-Body: `{ "name": "...", "areas": ["..."], "fee": 10000, "free_min_subtotal": 150000 }`
+Body: `{ "name": "...", "areas": ["..."], "fee": 10000, "free_min_subtotal": 150000, "is_active": true }`
+
+Respons (admin) menambahkan `is_active`, `created_at`, `updated_at`; `PATCH` dengan `is_active=false`
+menonaktifkan zona tanpa menghapusnya (zona nonaktif tidak muncul di endpoint publik).
 
 ---
 

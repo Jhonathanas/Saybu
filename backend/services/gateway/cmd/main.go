@@ -18,6 +18,7 @@ import (
 
 	authv1 "saybu/gen/saybu/auth/v1"
 	catalogv1 "saybu/gen/saybu/catalog/v1"
+	shippingv1 "saybu/gen/saybu/shipping/v1"
 	"saybu/pkg/authn"
 	"saybu/pkg/config"
 	"saybu/pkg/grpcx"
@@ -66,6 +67,16 @@ func main() {
 	catalogClient := catalogv1.NewCatalogServiceClient(catalogConn)
 	catalogHealth := grpc_health_v1.NewHealthClient(catalogConn)
 
+	shippingConn, err := grpcx.Dial(config.Get("SHIPPING_GRPC_ADDR", "localhost:50053"))
+	if err != nil {
+		log.Error("koneksi shipping gagal", "error", err)
+		os.Exit(1)
+	}
+	defer shippingConn.Close()
+
+	shippingClient := shippingv1.NewShippingServiceClient(shippingConn)
+	shippingHealth := grpc_health_v1.NewHealthClient(shippingConn)
+
 	uploads, err := storage.NewDisk(
 		config.Get("UPLOAD_DIR", "./data/uploads"),
 		config.Get("UPLOAD_URL_PREFIX", "/uploads"),
@@ -80,6 +91,8 @@ func main() {
 		uploads,
 		config.Int64("UPLOAD_MAX_BYTES", 5<<20),
 	)
+
+	shippingHandler := handlers.NewShipping(shippingClient, log)
 
 	cookieSecure := config.Bool("COOKIE_SECURE", config.Get("APP_ENV", "development") == "production")
 	authHandler := handlers.NewAuth(authClient, log, handlers.CookieConfig{
@@ -125,6 +138,19 @@ func main() {
 				return nil
 			},
 		},
+		httpx.NamedCheck{
+			Name: "shipping",
+			Check: func(ctx context.Context) error {
+				resp, err := shippingHealth.Check(ctx, &grpc_health_v1.HealthCheckRequest{Service: "shipping"})
+				if err != nil {
+					return err
+				}
+				if resp.GetStatus() != grpc_health_v1.HealthCheckResponse_SERVING {
+					return fmt.Errorf("status shipping: %s", resp.GetStatus())
+				}
+				return nil
+			},
+		},
 	))
 	r.Handle("/metrics", metrics.Handler())
 
@@ -152,6 +178,9 @@ func main() {
 		r.Get("/products", catalogHandler.ListProducts)
 		r.Get("/products/{slug}", catalogHandler.GetProduct)
 
+		r.Get("/shipping/zones", shippingHandler.ListZones)
+		r.Get("/shipping/quote", shippingHandler.Quote)
+
 		r.Group(func(r chi.Router) {
 			r.Use(authmw.Authenticate(tokens))
 			r.Get("/me", authHandler.Me)
@@ -166,6 +195,11 @@ func main() {
 				r.Patch("/products/{id}/stock", catalogHandler.SetStock)
 				r.Delete("/products/{id}", catalogHandler.DeleteProduct)
 				r.Post("/uploads", catalogHandler.Upload)
+
+				r.Get("/shipping/zones", shippingHandler.AdminListZones)
+				r.Post("/shipping/zones", shippingHandler.CreateZone)
+				r.Patch("/shipping/zones/{id}", shippingHandler.UpdateZone)
+				r.Delete("/shipping/zones/{id}", shippingHandler.DeleteZone)
 			})
 		})
 	})
