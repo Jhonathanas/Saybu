@@ -463,6 +463,46 @@ func (r *Repo) ReleaseStock(ctx context.Context, orderID string) error {
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
+	if err := releaseStockTx(ctx, tx, orderID); err != nil {
+		return err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("repo: commit release: %w", err)
+	}
+	return nil
+}
+
+// ReleaseStockOnce melepas stok untuk sebuah event, idempotent terhadap event_id.
+// Mengembalikan processed=false bila event sudah pernah diproses (tidak ada efek).
+func (r *Repo) ReleaseStockOnce(ctx context.Context, eventID, orderID string) (bool, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return false, fmt.Errorf("repo: begin release once: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	tag, err := tx.Exec(ctx, `
+		INSERT INTO processed_events (event_id) VALUES ($1)
+		ON CONFLICT (event_id) DO NOTHING
+	`, eventID)
+	if err != nil {
+		return false, fmt.Errorf("repo: insert processed event: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return false, nil // sudah diproses
+	}
+
+	if err := releaseStockTx(ctx, tx, orderID); err != nil {
+		return false, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return false, fmt.Errorf("repo: commit release once: %w", err)
+	}
+	return true, nil
+}
+
+// releaseStockTx melepas reservasi RESERVED milik order dalam transaksi yang ada.
+func releaseStockTx(ctx context.Context, tx pgx.Tx, orderID string) error {
 	rows, err := tx.Query(ctx, `
 		SELECT id, product_id, qty
 		FROM stock_reservations
@@ -501,9 +541,6 @@ func (r *Repo) ReleaseStock(ctx context.Context, orderID string) error {
 			x.id); err != nil {
 			return fmt.Errorf("repo: mark released: %w", err)
 		}
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("repo: commit release: %w", err)
 	}
 	return nil
 }

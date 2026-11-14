@@ -249,6 +249,11 @@ func (h *Auth) clearRefreshCookie(w http.ResponseWriter) {
 }
 
 func (h *Auth) allow(w http.ResponseWriter, r *http.Request, limiter *ratelimit.Limiter, key string) bool {
+	return allowRate(w, r, limiter, key)
+}
+
+// allowRate membatasi laju per key; menulis 429 dan mengembalikan false bila ditolak.
+func allowRate(w http.ResponseWriter, r *http.Request, limiter *ratelimit.Limiter, key string) bool {
 	if limiter == nil {
 		return true
 	}

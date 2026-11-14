@@ -136,6 +136,30 @@ func TestRepoIntegration(t *testing.T) {
 		t.Fatalf("stok setelah release = %d, want 2000", released.Stock)
 	}
 
+	// ReleaseStockOnce: idempotent terhadap event_id (dipakai konsumer Kafka).
+	orderID2 := ids.New()
+	if _, err := r.ReserveStock(ctx, orderID2, []domain.StockItem{{ProductID: created.ID, Qty: 500}}); err != nil {
+		t.Fatal(err)
+	}
+	eventID := ids.New()
+	processed, err := r.ReleaseStockOnce(ctx, eventID, orderID2)
+	if err != nil || !processed {
+		t.Fatalf("ReleaseStockOnce = %v, %v", processed, err)
+	}
+	afterOnce, _ := r.GetProductByID(ctx, created.ID, true)
+	if afterOnce.Stock != 2000 {
+		t.Fatalf("stok setelah release once = %d, want 2000", afterOnce.Stock)
+	}
+	// Event yang sama diulang tidak berefek lagi (stok tidak bertambah dua kali).
+	processed, err = r.ReleaseStockOnce(ctx, eventID, orderID2)
+	if err != nil || processed {
+		t.Fatalf("ReleaseStockOnce ulang = %v, %v", processed, err)
+	}
+	afterRepeat, _ := r.GetProductByID(ctx, created.ID, true)
+	if afterRepeat.Stock != 2000 {
+		t.Fatalf("stok setelah release once ulang = %d, want 2000", afterRepeat.Stock)
+	}
+
 	// Soft delete.
 	if _, err := r.SetActive(ctx, created.ID, false, nil); err != nil {
 		t.Fatal(err)

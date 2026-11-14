@@ -42,7 +42,7 @@ func WriteGRPCError(w http.ResponseWriter, r *http.Request, log *slog.Logger, er
 	case codes.AlreadyExists, codes.Aborted:
 		out = httpx.Conflict(st.Message())
 	case codes.FailedPrecondition:
-		out = httpx.Unprocessable(st.Message())
+		out = httpx.Unprocessable(st.Message(), details...)
 	case codes.ResourceExhausted:
 		out = httpx.New(http.StatusTooManyRequests, "RATE_LIMITED", st.Message())
 	case codes.Unavailable, codes.DeadlineExceeded:

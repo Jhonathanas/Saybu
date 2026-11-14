@@ -10,12 +10,13 @@ import (
 )
 
 type fakeRepo struct {
-	products map[string]domain.Product
-	cats     map[string]domain.Category
-	lastEv   []outbox.Record
-	lastPage int
-	lastLim  int
-	created  []domain.Product
+	products    map[string]domain.Product
+	cats        map[string]domain.Category
+	lastEv      []outbox.Record
+	lastPage    int
+	lastLim     int
+	created     []domain.Product
+	releaseOnce []string
 }
 
 func newFake() *fakeRepo {
@@ -90,6 +91,10 @@ func (f *fakeRepo) ReserveStock(context.Context, string, []domain.StockItem) ([]
 	return nil, nil
 }
 func (f *fakeRepo) ReleaseStock(context.Context, string) error { return nil }
+func (f *fakeRepo) ReleaseStockOnce(_ context.Context, eventID, orderID string) (bool, error) {
+	f.releaseOnce = append(f.releaseOnce, eventID+":"+orderID)
+	return true, nil
+}
 
 func newService(t *testing.T) (*Service, *fakeRepo) {
 	t.Helper()

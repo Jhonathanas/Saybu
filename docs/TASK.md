@@ -140,20 +140,20 @@
 |---|---|---|---|
 | M3-01 | `[x]` Service `shipping`: proto, migrasi `zones`, repo, domain kuotasi | Unit + repo test | 1.5 j |
 | M3-02 | `[x]` Gateway: zona publik + quote + CRUD zona admin | Sesuai `API_SPEC.md` §4 | 1 j |
-| M3-03 | `[ ]` Proto `order.v1` + migrasi `orders`, `order_items`, `order_status_history`, `idempotency_keys`, `outbox` | Naik/turun bersih | 1.5 j |
-| M3-04 | `[ ]` Domain order: state machine + validasi transisi | Test semua transisi legal/ilegal | 1.5 j |
-| M3-05 | `[ ]` Usecase checkout: quote ongkir → cek stok → reserve → simpan order → outbox | Test kompensasi saat gagal simpan | 2 j |
-| M3-06 | `[ ]` Idempotensi checkout (`Idempotency-Key`, hash body) | Double submit → satu order | 1 j |
-| M3-07 | `[ ]` `pkg/outbox` relay di order + producer Kafka | Event muncul di Kafka UI | 1.5 j |
-| M3-08 | `[ ]` Gateway: `POST /orders`, `GET /orders/{code}`, cancel | Sesuai `API_SPEC.md` §5 | 1.5 j |
+| M3-03 | `[x]` Proto `order.v1` + migrasi `orders`, `order_items`, `order_status_history`, `idempotency_keys`, `outbox` | Naik/turun bersih | 1.5 j |
+| M3-04 | `[x]` Domain order: state machine + validasi transisi | Test semua transisi legal/ilegal | 1.5 j |
+| M3-05 | `[x]` Usecase checkout: quote ongkir → cek stok → reserve → simpan order → outbox | Test kompensasi saat gagal simpan | 2 j |
+| M3-06 | `[x]` Idempotensi checkout (`Idempotency-Key`, hash body) | Double submit → satu order | 1 j |
+| M3-07 | `[x]` `pkg/outbox` relay di order + producer Kafka | Event muncul di Kafka UI | 1.5 j |
+| M3-08 | `[x]` Gateway: `POST /orders`, `GET /orders/{code}`, cancel | Sesuai `API_SPEC.md` §5 | 1.5 j |
 | M3-09 | `[ ]` UI checkout: data pembeli, pilih antar/ambil, zona, metode bayar, ringkasan | Total = subtotal + ongkir | 2 j |
 | M3-10 | `[ ]` UI halaman sukses + instruksi bayar + kode pesanan | Kode tampil & bisa disalin | 1 j |
 | M3-11 | `[ ]` UI lacak pesanan (kode + no. HP) | Status & riwayat tampil | 1 j |
-| M3-12 | `[ ]` Snapshot item & alamat di order | Ubah harga produk tidak mengubah order lama | 0.5 j |
-| M3-13 | `[ ]` Validasi server: harga, stok, step qty, min qty, zona | Test kasus negatif | 1.5 j |
-| M3-14 | `[ ]` Integration test alur checkout dengan Kafka container | Lulus di CI | 2 j |
-| M3-15 | `[ ]` Consumer `order.events.v1` di catalog (release stok) | Batal → stok kembali | 1 j |
-| M3-16 | `[ ]` Job expire order 24 jam → `order.expired` | Order lama otomatis expired | 1 j |
+| M3-12 | `[x]` Snapshot item & alamat di order | Ubah harga produk tidak mengubah order lama | 0.5 j |
+| M3-13 | `[x]` Validasi server: harga, stok, step qty, min qty, zona | Test kasus negatif | 1.5 j |
+| M3-14 | `[x]` Integration test alur checkout dengan Kafka container | Lulus di CI | 2 j |
+| M3-15 | `[x]` Consumer `order.events.v1` di catalog (release stok) | Batal → stok kembali | 1 j |
+| M3-16 | `[x]` Job expire order 24 jam → `order.expired` | Order lama otomatis expired | 1 j |
 
 **Gate M3:** checkout end-to-end membuat order + event Kafka; stok ter-reserve; batal melepas stok; tidak ada oversell.
 
@@ -170,6 +170,29 @@
   rekening; nilai harus di-quote karena mengandung `&` (mis. `"Saybu Buah & Sayur"`).
 - **Seed 4 zona contoh** (`Kec. Sukamaju`, `Kec. Cibaduyut`, `Kec. Dayeuhkolot`, `Ambil di tempat`) — admin dapat
   mengubah/menambah lewat UI.
+
+**Catatan penyimpangan M3 (tahap 2–6):**
+- **`order.v1` hanya RPC M3** (`CreateOrder`, `GetOrderByCode`, `ListMyOrders`, `CancelOrder`). Admin
+  `ListOrders`/`UpdateStatus`/`GetTodayStats` (`API_SPEC.md` §8.4) ditunda ke M5. RPC internal `ExpireDueOrders`
+  tidak dibuat; job expire berjalan lewat ticker internal di service order.
+- **Kode pesanan harian berurutan** `SB-YYYYMMDD-NNNN`, nomor urut di tabel `order_code_counters` dengan
+  `INSERT ... ON CONFLICT ... RETURNING` (aman dari balapan). Tanggal memakai zona `Asia/Jakarta`.
+- **Model stok**: `ReserveStock` langsung mengurangi `products.stock` dan mencatat reservasi `RESERVED`.
+  `payment.confirmed` (M4) akan menandai `CONFIRMED`; batal/kedaluwarsa → `ReleaseStock` (status `RELEASED`).
+- **Saga dikelola service order**: `shipping.Quote` → `catalog.CheckStock` → `catalog.ReserveStock` →
+  `INSERT` order/items/history + outbox `order.created`. Bila `INSERT` gagal setelah reservasi,
+  dikompensasi dengan `catalog.ReleaseStock`.
+- **Idempotensi**: header `Idempotency-Key` wajib (400 bila kosong); hash body = SHA-256 input ternormalisasi
+  (tanpa `user_id`). Replay dengan kunci & body sama → order yang sama; kunci sama body beda → 422.
+- **Pemetaan error**: stok kurang → `409`; transisi status ilegal / cancel tidak diizinkan → `409`;
+  zona tidak dikenal → `422` (`FailedPrecondition` + detail `zone_id`); `Idempotency-Key` body beda → `422`.
+- **Konsumer `order.events.v1` di catalog** memakai group `catalog-svc`; `order.cancelled`/`order.expired` →
+  `ReleaseStockOnce` (idempotent lewat `processed_events` dalam transaksi yang sama). Tipe lain diabaikan.
+- **Job expire** berjalan tiap `ORDER_EXPIRY_SWEEP` (default `1m`), memakai `FOR UPDATE SKIP LOCKED`,
+  menandai `PENDING_PAYMENT` yang lewat `expires_at` menjadi `EXPIRED` + outbox `order.expired`.
+  `ORDER_EXPIRY` (default `24h`) menentukan tenggat.
+- **Test integrasi Kafka** memakai broker dev (`KAFKA_BROKERS`) + DB dev, bukan testcontainers (konsisten
+  dengan penyimpangan M1/M2). Lihat `services/catalog/internal/service/consumer_integration_test.go`.
 
 ---
 
@@ -292,3 +315,5 @@
 | 2026-11-13 | Bug diperbaiki: cleanup test repo integrasi (`defer pool.Close()` → `t.Cleanup`); skrip `typecheck` frontend `tsc --noEmit` (no-op) → `tsc -b` |
 | 2026-11-14 | **M3 Tahap 1 selesai (M3-01, M3-02).** Service `shipping`: proto `shipping.v1` (`ListZones`/`Quote`/`UpsertZone`/`DeleteZone`), migrasi `zones` (naik/turun bersih), domain kuotasi (gratis bila `subtotal ≥ free_min_subtotal`), repo pgx, gRPC + admin HTTP. Gateway: zona publik, quote, CRUD zona admin. Seed 4 zona contoh idempoten. Verifikasi E2E manual via curl (kuotasi, zona nonaktif tersembunyi dari publik, CRUD admin, 401/404/409/422) lulus; unit + integrasi (repo) hijau |
 | 2026-11-14 | Penyimpangan M3 (tahap 1): zona `UNIQUE(name)` untuk seed idempoten, DELETE = hard delete (order snapshot nama/tarif), quote zona tak dikenal → 422, info rekening statis dari `.env` |
+| 2026-11-14 | **M3 Tahap 2–6 selesai (M3-03..M3-08, M3-12..M3-16).** Service `order` baru: proto `order.v1`, migrasi `orders`/`order_items`/`order_status_history`/`idempotency_keys`/`order_code_counters`, state machine, saga checkout (quote → cek stok → reserve → simpan + outbox `order.created`), idempotensi, job expire + outbox `order.expired`. Gateway: `POST /orders` (rate limit 10/mnt), `GET /orders/{code}`, `POST /orders/{code}/cancel`, `GET /me/orders` + `authmw.Optional`. Konsumer `order.events.v1` di catalog (`catalog-svc`) melepas stok idempoten. Verifikasi E2E manual via curl lulus (201, replay 201, body beda 422, tanpa header 400, stok kurang 409, zona tak dikenal 422, lacak 200/404, cancel → stok kembali & reservasi `RELEASED`, `/me/orders` 200/401, expire otomatis → stok kembali); unit + integrasi (repo + Kafka) hijau |
+| 2026-11-14 | Penyimpangan M3 (tahap 2–6): `order.v1` hanya RPC M3 (admin §8.4 → M5), tanpa RPC `ExpireDueOrders` (ticker internal), test integrasi Kafka pakai broker dev (bukan testcontainers) |

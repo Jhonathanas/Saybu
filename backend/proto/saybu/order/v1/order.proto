@@ -1,0 +1,113 @@
+syntax = "proto3";
+
+package saybu.order.v1;
+
+option go_package = "saybu/gen/saybu/order/v1;orderv1";
+
+// OrderService menangani checkout, state machine pesanan, dan pelacakan.
+//
+// CreateOrder menjalankan saga checkout: kuotasi ongkir -> cek stok ->
+// reservasi stok -> simpan pesanan + event outbox. Pesanan publik diakses
+// lewat kode + nomor HP (guest) atau kepemilikan akun.
+service OrderService {
+  rpc CreateOrder(CreateOrderRequest) returns (Order);
+  rpc GetOrderByCode(GetOrderByCodeRequest) returns (Order);
+  rpc ListMyOrders(ListMyOrdersRequest) returns (ListOrdersResponse);
+  rpc CancelOrder(CancelOrderRequest) returns (Order);
+}
+
+message Customer {
+  string name = 1;
+  string phone = 2;
+  string email = 3;
+  string note = 4;
+}
+
+message Address {
+  string line = 1;
+  string rt_rw = 2;
+  string kelurahan = 3;
+  string kecamatan = 4;
+  string city = 5;
+  string postal_code = 6;
+  string landmark = 7;
+}
+
+message OrderItemInput {
+  string product_id = 1;
+  int64 qty = 2; // satuan terkecil (gram untuk kg)
+}
+
+message CreateOrderRequest {
+  Customer customer = 1;
+  string fulfillment = 2;    // DELIVERY | PICKUP
+  string zone_id = 3;
+  Address address = 4;
+  string payment_method = 5; // TRANSFER | COD
+  repeated OrderItemInput items = 6;
+  string user_id = 7;         // diisi gateway bila login
+  string idempotency_key = 8; // dari header Idempotency-Key
+}
+
+message OrderItem {
+  string product_id = 1;
+  string name = 2;
+  string unit = 3;
+  int64 qty = 4;
+  string qty_display = 5;
+  int64 unit_price = 6;
+  int64 line_total = 7;
+}
+
+message StatusHistory {
+  string status = 1;
+  string note = 2;
+  string at = 3; // RFC3339
+}
+
+message Order {
+  string id = 1;
+  string code = 2;
+  string status = 3;
+  string fulfillment = 4;
+  string payment_method = 5;
+  Customer customer = 6;
+  Address address = 7;
+  string zone_id = 8;
+  string zone_name = 9;
+  int64 subtotal = 10;
+  int64 shipping_fee = 11;
+  int64 total = 12;
+  repeated OrderItem items = 13;
+  repeated StatusHistory status_history = 14;
+  string cancel_reason = 15;
+  string expires_at = 16;
+  string created_at = 17;
+  string updated_at = 18;
+}
+
+message GetOrderByCodeRequest {
+  string code = 1;
+  string phone = 2;   // wajib untuk guest
+  string user_id = 3; // bila login
+}
+
+message ListMyOrdersRequest {
+  string user_id = 1;
+  int32 page = 2;
+  int32 limit = 3;
+}
+
+message ListOrdersResponse {
+  repeated Order orders = 1;
+  int32 page = 2;
+  int32 limit = 3;
+  int64 total = 4;
+}
+
+message CancelOrderRequest {
+  string code = 1;
+  string phone = 2;
+  string user_id = 3;
+  string reason = 4;
+}

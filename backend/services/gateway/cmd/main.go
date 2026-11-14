@@ -18,6 +18,7 @@ import (
 
 	authv1 "saybu/gen/saybu/auth/v1"
 	catalogv1 "saybu/gen/saybu/catalog/v1"
+	orderv1 "saybu/gen/saybu/order/v1"
 	shippingv1 "saybu/gen/saybu/shipping/v1"
 	"saybu/pkg/authn"
 	"saybu/pkg/config"
@@ -77,6 +78,16 @@ func main() {
 	shippingClient := shippingv1.NewShippingServiceClient(shippingConn)
 	shippingHealth := grpc_health_v1.NewHealthClient(shippingConn)
 
+	orderConn, err := grpcx.Dial(config.Get("ORDER_GRPC_ADDR", "localhost:50054"))
+	if err != nil {
+		log.Error("koneksi order gagal", "error", err)
+		os.Exit(1)
+	}
+	defer orderConn.Close()
+
+	orderClient := orderv1.NewOrderServiceClient(orderConn)
+	orderHealth := grpc_health_v1.NewHealthClient(orderConn)
+
 	uploads, err := storage.NewDisk(
 		config.Get("UPLOAD_DIR", "./data/uploads"),
 		config.Get("UPLOAD_URL_PREFIX", "/uploads"),
@@ -93,6 +104,8 @@ func main() {
 	)
 
 	shippingHandler := handlers.NewShipping(shippingClient, log)
+
+	orderHandler := handlers.NewOrder(orderClient, log, ratelimit.New(10, time.Minute))
 
 	cookieSecure := config.Bool("COOKIE_SECURE", config.Get("APP_ENV", "development") == "production")
 	authHandler := handlers.NewAuth(authClient, log, handlers.CookieConfig{
@@ -151,6 +164,19 @@ func main() {
 				return nil
 			},
 		},
+		httpx.NamedCheck{
+			Name: "order",
+			Check: func(ctx context.Context) error {
+				resp, err := orderHealth.Check(ctx, &grpc_health_v1.HealthCheckRequest{Service: "order"})
+				if err != nil {
+					return err
+				}
+				if resp.GetStatus() != grpc_health_v1.HealthCheckResponse_SERVING {
+					return fmt.Errorf("status order: %s", resp.GetStatus())
+				}
+				return nil
+			},
+		},
 	))
 	r.Handle("/metrics", metrics.Handler())
 
@@ -181,9 +207,18 @@ func main() {
 		r.Get("/shipping/zones", shippingHandler.ListZones)
 		r.Get("/shipping/quote", shippingHandler.Quote)
 
+		// Checkout & pelacakan: guest boleh, akun dikenali bila login.
+		r.Group(func(r chi.Router) {
+			r.Use(authmw.Optional(tokens))
+			r.Post("/orders", orderHandler.CreateOrder)
+			r.Get("/orders/{code}", orderHandler.GetOrder)
+			r.Post("/orders/{code}/cancel", orderHandler.CancelOrder)
+		})
+
 		r.Group(func(r chi.Router) {
 			r.Use(authmw.Authenticate(tokens))
 			r.Get("/me", authHandler.Me)
+			r.Get("/me/orders", orderHandler.ListMyOrders)
 
 			r.Route("/admin", func(r chi.Router) {
 				r.Use(authmw.RequireRole("admin"))

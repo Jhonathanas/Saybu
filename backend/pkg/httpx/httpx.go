@@ -94,8 +94,8 @@ func Conflict(message string) *Error {
 }
 
 // Unprocessable (422) untuk pelanggaran aturan bisnis.
-func Unprocessable(message string) *Error {
-	return New(http.StatusUnprocessableEntity, "BUSINESS_RULE", message)
+func Unprocessable(message string, details ...Detail) *Error {
+	return New(http.StatusUnprocessableEntity, "BUSINESS_RULE", message, details...)
 }
 
 // Internal (500) membungkus error tak terduga.

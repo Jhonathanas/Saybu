@@ -504,12 +504,16 @@ service OrderService {
   rpc CreateOrder(CreateOrderRequest) returns (Order);
   rpc GetOrderByCode(GetOrderByCodeRequest) returns (Order);
   rpc ListMyOrders(ListMyOrdersRequest) returns (ListOrdersResponse);
-  rpc ListOrders(ListOrdersRequest) returns (ListOrdersResponse); // admin
-  rpc UpdateStatus(UpdateStatusRequest) returns (Order);           // admin
+  rpc ListOrders(ListOrdersRequest) returns (ListOrdersResponse); // admin (M5)
+  rpc UpdateStatus(UpdateStatusRequest) returns (Order);           // admin (M5)
   rpc CancelOrder(CancelOrderRequest) returns (Order);
-  rpc GetTodayStats(google.protobuf.Empty) returns (TodayStats);
+  rpc GetTodayStats(google.protobuf.Empty) returns (TodayStats);   // admin (M5)
 }
 ```
+
+> **M3:** proto hanya mengimplementasikan `CreateOrder`, `GetOrderByCode`, `ListMyOrders`, dan `CancelOrder`.
+> RPC admin `ListOrders`/`UpdateStatus`/`GetTodayStats` ditunda ke M5. Job penandaan pesanan kedaluwarsa
+> berjalan lewat ticker internal service order (tanpa RPC).
 
 ### 8.5 `payment.v1.PaymentService`
 
@@ -560,6 +564,10 @@ Envelope (semua event):
 // order.expired
 { "order_id": "...", "code": "SB-...", "items": [] }
 ```
+
+> **M3** memancarkan `order.created` (saat checkout) serta `order.cancelled` dan `order.expired` (dari gateway
+> dan job expire). `order.status_changed` baru dipancarkan pada M5 (admin `UpdateStatus`). Konsumer catalog
+> (`catalog-svc`) bereaksi pada `order.cancelled`/`order.expired` untuk melepas reservasi stok secara idempoten.
 
 ### 9.2 `payment.events.v1`
 

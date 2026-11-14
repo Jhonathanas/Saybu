@@ -57,6 +57,20 @@ func main() {
 		relay := outbox.NewRelay(outbox.NewStore(pool), producer, log)
 		go relay.Run(ctx)
 
+		// Konsumer event pesanan: batal/kedaluwarsa -> lepas reservasi stok.
+		consumer, err := kafkax.NewConsumer(brokers, "catalog-svc",
+			[]string{"order.events.v1"}, svc.HandleOrderEvent, log)
+		if err != nil {
+			log.Error("konsumer order.events gagal disiapkan", "error", err)
+			os.Exit(1)
+		}
+		defer consumer.Close()
+		go func() {
+			if err := consumer.Run(ctx); err != nil {
+				log.Error("konsumer order.events berhenti", "error", err)
+			}
+		}()
+
 		checks = append(checks, httpx.NamedCheck{Name: "kafka", Check: producer.Ping})
 	}
 

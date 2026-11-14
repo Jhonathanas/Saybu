@@ -3,6 +3,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -33,6 +34,7 @@ type Repo interface {
 	CheckStock(ctx context.Context, items []domain.StockItem) ([]domain.StockStatus, error)
 	ReserveStock(ctx context.Context, orderID string, items []domain.StockItem) ([]domain.StockStatus, error)
 	ReleaseStock(ctx context.Context, orderID string) error
+	ReleaseStockOnce(ctx context.Context, eventID, orderID string) (bool, error)
 }
 
 // Service adalah usecase katalog.
@@ -329,6 +331,41 @@ func (s *Service) ReleaseStock(ctx context.Context, orderID string) error {
 		return (&domain.ValidationError{}).Add("order_id", "ID order wajib diisi.")
 	}
 	return s.repo.ReleaseStock(ctx, orderID)
+}
+
+// ReleaseStockForOrder melepas stok untuk event pesanan secara idempotent
+// (event_id dicatat di processed_events dalam transaksi yang sama).
+func (s *Service) ReleaseStockForOrder(ctx context.Context, eventID, orderID string) error {
+	if strings.TrimSpace(eventID) == "" {
+		return (&domain.ValidationError{}).Add("event_id", "ID event wajib diisi.")
+	}
+	if strings.TrimSpace(orderID) == "" {
+		return (&domain.ValidationError{}).Add("order_id", "ID order wajib diisi.")
+	}
+	_, err := s.repo.ReleaseStockOnce(ctx, eventID, orderID)
+	return err
+}
+
+// HandleOrderEvent memproses event dari order.events.v1.
+//
+// order.cancelled dan order.expired melepas reservasi stok pesanan. Tipe lain
+// diabaikan. Handler idempotent lewat processed_events.
+func (s *Service) HandleOrderEvent(ctx context.Context, ev kafkax.Event) error {
+	switch ev.Type {
+	case "order.cancelled", "order.expired":
+		var p struct {
+			OrderID string `json:"order_id"`
+		}
+		if err := json.Unmarshal(ev.Payload, &p); err != nil {
+			return fmt.Errorf("service: payload %s tidak valid: %w", ev.Type, err)
+		}
+		if strings.TrimSpace(p.OrderID) == "" {
+			return fmt.Errorf("service: event %s tanpa order_id", ev.Type)
+		}
+		return s.ReleaseStockForOrder(ctx, ev.EventID, p.OrderID)
+	default:
+		return nil
+	}
 }
 
 func (s *Service) ensureCategory(ctx context.Context, categoryID string) error {

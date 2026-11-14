@@ -192,6 +192,7 @@ SHIPPING_DB_DSN=postgres://saybu:saybu@localhost:5433/saybu_shipping?sslmode=dis
 ORDER_GRPC_ADDR=:50054
 ORDER_DB_DSN=postgres://saybu:saybu@localhost:5433/saybu_orders?sslmode=disable
 ORDER_EXPIRY=24h
+ORDER_EXPIRY_SWEEP=1m
 
 # payment
 PAYMENT_GRPC_ADDR=:50055
