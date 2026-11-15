@@ -63,6 +63,17 @@ export function StoreLayout() {
               )}
             </NavLink>
 
+            <NavLink
+              to="/pesanan"
+              className={({ isActive }) =>
+                `tap-target inline-flex items-center rounded-lg px-3 ${
+                  isActive ? 'text-brand-700' : 'text-stone-600 hover:bg-stone-100'
+                }`
+              }
+            >
+              Lacak
+            </NavLink>
+
             {user ? (
               <>
                 <NavLink

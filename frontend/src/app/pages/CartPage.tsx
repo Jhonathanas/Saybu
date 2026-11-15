@@ -1,4 +1,4 @@
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { Button } from '@/components/ui/Button'
 import { Alert } from '@/components/ui/Feedback'
 import { QtyPicker } from '@/features/catalog/QtyPicker'
@@ -11,6 +11,7 @@ export function CartPage() {
   const setQty = useCart((s) => s.setQty)
   const remove = useCart((s) => s.remove)
   const clear = useCart((s) => s.clear)
+  const navigate = useNavigate()
 
   const subtotal = lines.reduce((sum, line) => sum + lineTotal(line), 0)
 
@@ -91,11 +92,9 @@ export function CartPage() {
           <span>{formatIDR(subtotal)}</span>
         </div>
         <p className="text-xs text-stone-500">
-          Ongkir dan metode pengambilan dihitung saat checkout (tersedia pada milestone berikutnya).
+          Ongkir dan metode pengambilan dihitung di halaman checkout.
         </p>
-        <Button disabled title="Checkout tersedia pada M3">
-          Checkout (segera)
-        </Button>
+        <Button onClick={() => navigate('/checkout')}>Checkout</Button>
       </div>
     </div>
   )

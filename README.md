@@ -25,9 +25,9 @@ Toko online buah & sayur untuk usaha keluarga — sekaligus proyek latihan
 |---|---|
 | M0 Fondasi | ✅ selesai |
 | M1 Auth & gateway | ✅ selesai |
-| M2 Katalog | ⬜ berikutnya |
-| M3 Order + Kafka | ⬜ |
-| M4 Pembayaran & Telegram | ⬜ |
+| M2 Katalog | ✅ selesai |
+| M3 Ongkir, checkout & order + Kafka | ✅ selesai |
+| M4 Pembayaran & Telegram | ⬜ berikutnya |
 | M5–M7 | ⬜ |
 
 ## Prasyarat

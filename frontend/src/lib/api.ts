@@ -65,6 +65,8 @@ export function getAccessToken(): string | null {
 export interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
   body?: unknown
+  /** Header tambahan, mis. `Idempotency-Key` saat checkout. */
+  headers?: Record<string, string>
   /** Kirim Authorization: Bearer. Default true bila token tersedia. */
   auth?: boolean
   signal?: AbortSignal
@@ -137,8 +139,8 @@ async function parseError(res: Response): Promise<ApiError> {
 }
 
 async function send(path: string, options: RequestOptions): Promise<Response> {
-  const headers: Record<string, string> = { Accept: 'application/json' }
-  if (options.body !== undefined) {
+  const headers: Record<string, string> = { Accept: 'application/json', ...options.headers }
+  if (options.body !== undefined && !headers['Content-Type']) {
     headers['Content-Type'] = 'application/json'
   }
   const withAuth = options.auth !== false

@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Versi | 1.0 |
-| Terakhir diperbarui | 2026-11-12 |
+| Terakhir diperbarui | 2026-11-15 |
 | Cara pakai | Centang `[x]` saat selesai. Satu task = satu PR/commit yang bisa diuji. |
 
 **Legenda status:** `[ ]` belum · `[~]` sedang dikerjakan · `[x]` selesai · `[!]` terblokir
@@ -17,7 +17,7 @@
 | M0 | Fondasi | 12 | 12 | ✅ |
 | M1 | Auth & gateway | 13 | 13 | ✅ |
 | M2 | Katalog | 15 | 15 | ✅ |
-| M3 | Ongkir & order | 16 | 2 | 🚧 |
+| M3 | Ongkir & order | 16 | 16 | ✅ |
 | M4 | Pembayaran & notifikasi | 14 | 0 | ⬜ |
 | M5 | Kelengkapan | 12 | 0 | ⬜ |
 | M6 | Observability & hardening | 8 | 0 | ⬜ |
@@ -146,9 +146,9 @@
 | M3-06 | `[x]` Idempotensi checkout (`Idempotency-Key`, hash body) | Double submit → satu order | 1 j |
 | M3-07 | `[x]` `pkg/outbox` relay di order + producer Kafka | Event muncul di Kafka UI | 1.5 j |
 | M3-08 | `[x]` Gateway: `POST /orders`, `GET /orders/{code}`, cancel | Sesuai `API_SPEC.md` §5 | 1.5 j |
-| M3-09 | `[ ]` UI checkout: data pembeli, pilih antar/ambil, zona, metode bayar, ringkasan | Total = subtotal + ongkir | 2 j |
-| M3-10 | `[ ]` UI halaman sukses + instruksi bayar + kode pesanan | Kode tampil & bisa disalin | 1 j |
-| M3-11 | `[ ]` UI lacak pesanan (kode + no. HP) | Status & riwayat tampil | 1 j |
+| M3-09 | `[x]` UI checkout: data pembeli, pilih antar/ambil, zona, metode bayar, ringkasan | Total = subtotal + ongkir | 2 j |
+| M3-10 | `[x]` UI halaman sukses + instruksi bayar + kode pesanan | Kode tampil & bisa disalin | 1 j |
+| M3-11 | `[x]` UI lacak pesanan (kode + no. HP) | Status & riwayat tampil | 1 j |
 | M3-12 | `[x]` Snapshot item & alamat di order | Ubah harga produk tidak mengubah order lama | 0.5 j |
 | M3-13 | `[x]` Validasi server: harga, stok, step qty, min qty, zona | Test kasus negatif | 1.5 j |
 | M3-14 | `[x]` Integration test alur checkout dengan Kafka container | Lulus di CI | 2 j |
@@ -193,6 +193,24 @@
   `ORDER_EXPIRY` (default `24h`) menentukan tenggat.
 - **Test integrasi Kafka** memakai broker dev (`KAFKA_BROKERS`) + DB dev, bukan testcontainers (konsisten
   dengan penyimpangan M1/M2). Lihat `services/catalog/internal/service/consumer_integration_test.go`.
+
+**Catatan penyimpangan M3 (tahap 7 — frontend):**
+- **Rute baru**: `/checkout` (checkout), `/pesanan` (lacak), `/pesanan/:code` (detail + halaman sukses).
+  Keranjang → tombol **Checkout** mengarah ke `/checkout`; navbar menambah tautan **Lacak**.
+- **Instruksi transfer statis dari env frontend** (`VITE_BANK_NAME`, `VITE_BANK_ACCOUNT`, `VITE_BANK_HOLDER`,
+  lihat `frontend/.env.example`), selaras dengan `BANK_*` backend. Endpoint `GET /orders/{code}/payment`
+  (M4) belum ada, jadi halaman sukses membaca env frontend sampai M4.
+- **Idempotency-Key dibuat di klien** (`crypto.randomUUID`, fallback untuk lingkungan lama) dan **stabil selama
+  isi pesanan tidak berubah** — klik ganda/retry jaringan memakai kunci sama sehingga tidak membuat pesanan ganda.
+  Kunci diperbarui otomatis bila isi form/keranjang berubah (server menolak body beda dengan kunci sama → 422).
+- **Ongkir dihitung ulang di klien hanya untuk tampilan**; server tetap menghitung ulang saat pesanan dibuat.
+  Kuotasi diambil dari `GET /shipping/quote` saat zona dipilih.
+- **Data pembeli diisi otomatis** dari profil bila pengguna login (tanpa menimpa isian manual).
+- **Riwayat pesanan akun** (`GET /me/orders`) belum ditampilkan di UI; tetap di M5 (M5-01). Halaman
+  `/pesanan/:code` hanya melacak satu pesanan via kode + HP (guest) atau login (pemilik).
+- **Halaman sukses** memakai `?baru=1` untuk banner sukses dan menyertakan `phone` di URL agar guest dapat
+  memuat ulang halaman detail (mekanisme sama dengan `API_SPEC.md` §5.2).
+- **`lib/api.ts`** kini menerima header kustom (`RequestOptions.headers`) untuk mengirim `Idempotency-Key`.
 
 ---
 
@@ -317,3 +335,5 @@
 | 2026-11-14 | Penyimpangan M3 (tahap 1): zona `UNIQUE(name)` untuk seed idempoten, DELETE = hard delete (order snapshot nama/tarif), quote zona tak dikenal → 422, info rekening statis dari `.env` |
 | 2026-11-14 | **M3 Tahap 2–6 selesai (M3-03..M3-08, M3-12..M3-16).** Service `order` baru: proto `order.v1`, migrasi `orders`/`order_items`/`order_status_history`/`idempotency_keys`/`order_code_counters`, state machine, saga checkout (quote → cek stok → reserve → simpan + outbox `order.created`), idempotensi, job expire + outbox `order.expired`. Gateway: `POST /orders` (rate limit 10/mnt), `GET /orders/{code}`, `POST /orders/{code}/cancel`, `GET /me/orders` + `authmw.Optional`. Konsumer `order.events.v1` di catalog (`catalog-svc`) melepas stok idempoten. Verifikasi E2E manual via curl lulus (201, replay 201, body beda 422, tanpa header 400, stok kurang 409, zona tak dikenal 422, lacak 200/404, cancel → stok kembali & reservasi `RELEASED`, `/me/orders` 200/401, expire otomatis → stok kembali); unit + integrasi (repo + Kafka) hijau |
 | 2026-11-14 | Penyimpangan M3 (tahap 2–6): `order.v1` hanya RPC M3 (admin §8.4 → M5), tanpa RPC `ExpireDueOrders` (ticker internal), test integrasi Kafka pakai broker dev (bukan testcontainers) |
+| 2026-11-15 | **M3 Tahap 7 selesai (M3-09..M3-11) — frontend checkout.** Rute baru `/checkout`, `/pesanan`, `/pesanan/:code`. Form checkout (data pembeli, antar/ambil, zona + kuotasi, alamat, metode bayar, ringkasan total), halaman sukses dengan instruksi transfer statis (`VITE_BANK_*`) + kode pesanan yang bisa disalin, dan halaman lacak (kode + HP) dengan status & riwayat. Idempotency-Key dibuat klien dan stabil selama isi pesanan tidak berubah; `lib/api.ts` mendukung header kustom. Verifikasi: `eslint`, `tsc -b`, `vitest` (59 test) dan `vite build` hijau. Uji E2E manual tertunda karena infra Docker (Postgres/Kafka) mati di lingkungan ini |
+| 2026-11-15 | Penyimpangan M3 (tahap 7): instruksi transfer dari env frontend (`VITE_BANK_*`) sampai endpoint pembayaran M4 ada; riwayat pesanan akun (`/me/orders`) tetap M5; halaman detail guest menyertakan `phone` di URL |

@@ -300,6 +300,11 @@ Boleh selama status `PENDING_PAYMENT` / `WAITING_VERIFICATION` / `PAID`.
 
 ## 6. Pembayaran
 
+> **Status implementasi:** endpoint di §6 belum ada (M4). Pada M3, halaman sukses checkout
+> menampilkan instruksi transfer dari env frontend (`VITE_BANK_NAME`, `VITE_BANK_ACCOUNT`,
+> `VITE_BANK_HOLDER`) dan kode pesanan untuk konfirmasi manual ke admin. Setelah §6.1 tersedia,
+> halaman sukses akan membaca data bank dari API ini.
+
 ### 6.1 `GET /orders/{code}/payment`
 
 Instruksi pembayaran + status.

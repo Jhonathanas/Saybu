@@ -127,8 +127,8 @@ frontend/
 │   │   ├── auth/
 │   │   ├── catalog/
 │   │   ├── cart/
-│   │   ├── checkout/
-│   │   ├── orders/
+│   │   ├── checkout/     # checkout, halaman sukses, lacak pesanan (M3)
+│   │   ├── orders/       # riwayat pesanan akun (M5)
 │   │   └── admin/
 │   ├── components/ui/    # shadcn
 │   ├── lib/              # api client, formatter, env
@@ -208,6 +208,25 @@ KAFKA_CONSUMER_GROUP_PREFIX=saybu
 NOTIFICATION_HTTP_ADDR=:8086
 TELEGRAM_BOT_TOKEN=
 TELEGRAM_ADMIN_CHAT_ID=
+
+# bank (instruksi transfer manual di halaman sukses; nilai di-quote bila ada '&')
+BANK_NAME="BCA"
+BANK_ACCOUNT="1234567890"
+BANK_HOLDER="Saybu Buah & Sayur"
+```
+
+### Environment frontend (Vite)
+
+Dibaca dari `frontend/.env` (lihat `frontend/.env.example`).
+
+```dotenv
+VITE_API_BASE_URL=/api/v1
+VITE_PROXY_TARGET=http://localhost:8081
+
+# Instruksi transfer di halaman sukses checkout (selaras dengan BANK_* backend).
+VITE_BANK_NAME="BCA"
+VITE_BANK_ACCOUNT="1234567890"
+VITE_BANK_HOLDER="Saybu Buah & Sayur"
 ```
 
 ---

@@ -10,6 +10,9 @@ import { ProductListPage } from './pages/ProductListPage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { RegisterPage } from '@/features/auth/RegisterPage'
 import { RequireAuth, RequireRole } from '@/features/auth/guards'
+import { CheckoutPage } from '@/features/checkout/CheckoutPage'
+import { OrderDetailPage } from '@/features/checkout/OrderDetailPage'
+import { OrderTrackingPage } from '@/features/checkout/OrderTrackingPage'
 import { AdminDashboardPage } from '@/features/admin/AdminDashboardPage'
 import { AdminProductsPage } from '@/features/admin/AdminProductsPage'
 import { AdminUsersPage } from '@/features/admin/AdminUsersPage'
@@ -22,6 +25,9 @@ export function App() {
         <Route path="produk" element={<ProductListPage />} />
         <Route path="produk/:slug" element={<ProductDetailPage />} />
         <Route path="keranjang" element={<CartPage />} />
+        <Route path="checkout" element={<CheckoutPage />} />
+        <Route path="pesanan" element={<OrderTrackingPage />} />
+        <Route path="pesanan/:code" element={<OrderDetailPage />} />
         <Route element={<RequireAuth />}>
           <Route path="akun" element={<AccountPage />} />
         </Route>
