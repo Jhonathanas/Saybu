@@ -74,3 +74,38 @@ func TestReleaseStockForOrderValidates(t *testing.T) {
 		t.Fatalf("err = %v, want ValidationError", err)
 	}
 }
+
+func TestHandlePaymentEventConfirmsStock(t *testing.T) {
+	s, r := newService(t)
+
+	if err := s.HandlePaymentEvent(context.Background(), orderEvent("payment.confirmed", "ev-confirm", "o-1")); err != nil {
+		t.Fatal(err)
+	}
+	if len(r.confirmOnce) != 1 || r.confirmOnce[0] != "ev-confirm:o-1" {
+		t.Fatalf("confirm tidak dipanggil: %+v", r.confirmOnce)
+	}
+}
+
+func TestHandlePaymentEventIgnoresOtherTypes(t *testing.T) {
+	s, r := newService(t)
+
+	if err := s.HandlePaymentEvent(context.Background(), orderEvent("payment.proof_uploaded", "ev-1", "o-1")); err != nil {
+		t.Fatal(err)
+	}
+	if len(r.confirmOnce) != 0 {
+		t.Fatalf("proof_uploaded tidak boleh confirm: %+v", r.confirmOnce)
+	}
+}
+
+func TestHandlePaymentEventBadPayload(t *testing.T) {
+	s, _ := newService(t)
+
+	ev := kafkax.Event{EventID: "ev-1", Type: "payment.confirmed", Payload: json.RawMessage(`not-json`)}
+	if err := s.HandlePaymentEvent(context.Background(), ev); err == nil {
+		t.Fatal("payload rusak harus error")
+	}
+	missing := kafkax.Event{EventID: "ev-1", Type: "payment.confirmed", Payload: json.RawMessage(`{}`)}
+	if err := s.HandlePaymentEvent(context.Background(), missing); err == nil {
+		t.Fatal("order_id kosong harus error")
+	}
+}

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
@@ -14,6 +15,7 @@ import (
 
 	catalogv1 "saybu/gen/saybu/catalog/v1"
 	shippingv1 "saybu/gen/saybu/shipping/v1"
+	"saybu/pkg/kafkax"
 	"saybu/pkg/outbox"
 	"saybu/services/order/internal/domain"
 	"saybu/services/order/internal/repo"
@@ -129,6 +131,28 @@ func (f *fakeRepo) Transition(_ context.Context, id, from, to, note, actor strin
 
 func (f *fakeRepo) ExpireDue(_ context.Context, _ int, events func(domain.Order) ([]outbox.Record, error)) ([]domain.Order, error) {
 	return nil, nil
+}
+
+func (f *fakeRepo) TransitionFromPayment(_ context.Context, eventID, eventType, orderID, from, to, note, actor string, events func(domain.Order) ([]outbox.Record, error)) (domain.Order, bool, error) {
+	o, ok := f.orders[orderID]
+	if !ok {
+		return domain.Order{}, false, domain.ErrOrderNotFound
+	}
+	if o.Status != from {
+		return domain.Order{}, false, nil
+	}
+	f.lastFrom, f.lastTo = from, to
+	o.Status = to
+	o.History = append(o.History, domain.StatusEntry{Status: to, Note: note, Actor: actor, At: time.Now().UTC()})
+	if events != nil {
+		recs, err := events(o)
+		if err != nil {
+			return domain.Order{}, false, err
+		}
+		f.transitionEvents = append(f.transitionEvents, recs...)
+	}
+	f.orders[orderID] = o
+	return o, true, nil
 }
 
 type fakeCatalog struct {
@@ -528,5 +552,73 @@ func TestCreateOrderUnknownZoneMapsBusinessRule(t *testing.T) {
 	// Zona divalidasi sebelum reservasi stok.
 	if len(c.reserved) != 0 {
 		t.Fatalf("stok tidak boleh direservasi: %+v", c.reserved)
+	}
+}
+
+func paymentEvent(eventType string, payload map[string]any) kafkax.Event {
+	raw, _ := json.Marshal(payload)
+	return kafkax.Event{EventID: "ev-" + eventType, Type: eventType, Payload: raw}
+}
+
+func TestHandlePaymentEventTransitions(t *testing.T) {
+	cases := []struct {
+		eventType string
+		from      string
+		want      string
+	}{
+		{"payment.proof_uploaded", domain.StatusPendingPayment, domain.StatusWaitingVerification},
+		{"payment.confirmed", domain.StatusWaitingVerification, domain.StatusPaid},
+		{"payment.rejected", domain.StatusWaitingVerification, domain.StatusPendingPayment},
+	}
+	for _, c := range cases {
+		t.Run(c.eventType, func(t *testing.T) {
+			svc, r, _, _ := newTestService(t)
+			r.orders["o-1"] = domain.Order{ID: "o-1", Code: "SB-1", Status: c.from}
+
+			ev := paymentEvent(c.eventType, map[string]any{"order_id": "o-1", "code": "SB-1", "reason": "x"})
+			if err := svc.HandlePaymentEvent(context.Background(), ev); err != nil {
+				t.Fatal(err)
+			}
+			if got := r.orders["o-1"].Status; got != c.want {
+				t.Fatalf("status = %s, want %s", got, c.want)
+			}
+			if len(r.transitionEvents) != 1 || r.transitionEvents[0].Headers["event-type"] != "order.status_changed" {
+				t.Fatalf("event = %+v", r.transitionEvents)
+			}
+		})
+	}
+}
+
+func TestHandlePaymentEventNoOpWhenWrongStatus(t *testing.T) {
+	svc, r, _, _ := newTestService(t)
+	r.orders["o-1"] = domain.Order{ID: "o-1", Code: "SB-1", Status: domain.StatusPaid}
+
+	ev := paymentEvent("payment.proof_uploaded", map[string]any{"order_id": "o-1"})
+	if err := svc.HandlePaymentEvent(context.Background(), ev); err != nil {
+		t.Fatal(err)
+	}
+	if r.orders["o-1"].Status != domain.StatusPaid {
+		t.Fatalf("status tidak boleh berubah: %s", r.orders["o-1"].Status)
+	}
+	if len(r.transitionEvents) != 0 {
+		t.Fatalf("tidak boleh ada event: %+v", r.transitionEvents)
+	}
+}
+
+func TestHandlePaymentEventIgnoresUnknownAndBadPayload(t *testing.T) {
+	svc, _, _, _ := newTestService(t)
+
+	if err := svc.HandlePaymentEvent(context.Background(), paymentEvent("payment.foo", map[string]any{"order_id": "o-1"})); err != nil {
+		t.Fatalf("tipe lain harus diabaikan: %v", err)
+	}
+
+	bad := kafkax.Event{EventID: "e", Type: "payment.confirmed", Payload: json.RawMessage(`not-json`)}
+	if err := svc.HandlePaymentEvent(context.Background(), bad); err == nil {
+		t.Fatal("payload rusak harus error")
+	}
+
+	missing := paymentEvent("payment.confirmed", map[string]any{})
+	if err := svc.HandlePaymentEvent(context.Background(), missing); err == nil {
+		t.Fatal("order_id kosong harus error")
 	}
 }

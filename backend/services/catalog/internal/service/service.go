@@ -35,6 +35,7 @@ type Repo interface {
 	ReserveStock(ctx context.Context, orderID string, items []domain.StockItem) ([]domain.StockStatus, error)
 	ReleaseStock(ctx context.Context, orderID string) error
 	ReleaseStockOnce(ctx context.Context, eventID, orderID string) (bool, error)
+	ConfirmStockOnce(ctx context.Context, eventID, orderID string) (bool, error)
 }
 
 // Service adalah usecase katalog.
@@ -363,6 +364,41 @@ func (s *Service) HandleOrderEvent(ctx context.Context, ev kafkax.Event) error {
 			return fmt.Errorf("service: event %s tanpa order_id", ev.Type)
 		}
 		return s.ReleaseStockForOrder(ctx, ev.EventID, p.OrderID)
+	default:
+		return nil
+	}
+}
+
+// ConfirmStockForOrder menandai reservasi stok CONFIRMED setelah pembayaran
+// terverifikasi, idempotent lewat processed_events.
+func (s *Service) ConfirmStockForOrder(ctx context.Context, eventID, orderID string) error {
+	if strings.TrimSpace(eventID) == "" {
+		return (&domain.ValidationError{}).Add("event_id", "ID event wajib diisi.")
+	}
+	if strings.TrimSpace(orderID) == "" {
+		return (&domain.ValidationError{}).Add("order_id", "ID order wajib diisi.")
+	}
+	_, err := s.repo.ConfirmStockOnce(ctx, eventID, orderID)
+	return err
+}
+
+// HandlePaymentEvent memproses event dari payment.events.v1.
+//
+// payment.confirmed menandai reservasi stok pesanan sebagai CONFIRMED
+// (pemakaian final). Tipe lain diabaikan.
+func (s *Service) HandlePaymentEvent(ctx context.Context, ev kafkax.Event) error {
+	switch ev.Type {
+	case "payment.confirmed":
+		var p struct {
+			OrderID string `json:"order_id"`
+		}
+		if err := json.Unmarshal(ev.Payload, &p); err != nil {
+			return fmt.Errorf("service: payload %s tidak valid: %w", ev.Type, err)
+		}
+		if strings.TrimSpace(p.OrderID) == "" {
+			return fmt.Errorf("service: event %s tanpa order_id", ev.Type)
+		}
+		return s.ConfirmStockForOrder(ctx, ev.EventID, p.OrderID)
 	default:
 		return nil
 	}

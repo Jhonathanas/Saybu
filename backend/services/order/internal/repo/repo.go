@@ -343,6 +343,75 @@ func (r *Repo) Transition(ctx context.Context, id, from, to, note, actor string,
 	return r.GetOrderByID(ctx, id)
 }
 
+// TransitionFromPayment memindahkan status pesanan akibat event pembayaran
+// secara idempotent. Event dicatat di processed_events dalam transaksi yang
+// sama; bila event sudah pernah diproses, applied=false tanpa efek.
+// Bila pesanan tidak berada pada status `from`, event tetap ditandai diproses
+// (retry tidak akan menolong) dan applied=false.
+func (r *Repo) TransitionFromPayment(ctx context.Context, eventID, eventType, orderID, from, to, note, actor string, events func(domain.Order) ([]outbox.Record, error)) (domain.Order, bool, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return domain.Order{}, false, fmt.Errorf("repo: begin payment transition: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	tag, err := tx.Exec(ctx, `
+		INSERT INTO processed_events (event_id, event_type) VALUES ($1, $2)
+		ON CONFLICT (event_id) DO NOTHING
+	`, eventID, eventType)
+	if err != nil {
+		return domain.Order{}, false, fmt.Errorf("repo: insert processed event: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return domain.Order{}, false, nil
+	}
+
+	tag, err = tx.Exec(ctx, `
+		UPDATE orders SET status = $3, updated_at = now()
+		WHERE id = $1 AND status = $2
+	`, orderID, from, to)
+	if err != nil {
+		return domain.Order{}, false, fmt.Errorf("repo: update status from payment: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		// Pesanan tidak pada status yang diharapkan; tetap tandai event selesai.
+		if err := tx.Commit(ctx); err != nil {
+			return domain.Order{}, false, fmt.Errorf("repo: commit payment transition: %w", err)
+		}
+		return domain.Order{}, false, nil
+	}
+
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO order_status_history (id, order_id, status, note, actor)
+		VALUES (gen_random_uuid(), $1, $2, $3, $4)
+	`, orderID, to, note, actor); err != nil {
+		return domain.Order{}, false, fmt.Errorf("repo: insert history: %w", err)
+	}
+
+	o, err := scanOrder(tx.QueryRow(ctx, `SELECT `+orderColumns+` FROM orders o WHERE o.id = $1`, orderID))
+	if err != nil {
+		return domain.Order{}, false, fmt.Errorf("repo: reload order: %w", err)
+	}
+	if err := loadItems(ctx, tx, &o); err != nil {
+		return domain.Order{}, false, err
+	}
+
+	if events != nil {
+		recs, err := events(o)
+		if err != nil {
+			return domain.Order{}, false, err
+		}
+		if err := insertEvents(ctx, r.outbox, tx, recs); err != nil {
+			return domain.Order{}, false, err
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return domain.Order{}, false, fmt.Errorf("repo: commit payment transition: %w", err)
+	}
+	return o, true, nil
+}
+
 // ExpireDue menandai pesanan PENDING_PAYMENT yang melewati expires_at sebagai
 // EXPIRED, menulis riwayat + event, dan mengembalikan pesanan yang kedaluwarsa.
 // Memakai FOR UPDATE SKIP LOCKED agar aman dijalankan paralel.

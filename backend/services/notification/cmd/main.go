@@ -1,5 +1,4 @@
 // Command notification mengonsumsi event Kafka dan mengirim notifikasi Telegram.
-// Pada M0 baru menyediakan health/ready/metrics; consumer ditambahkan di M4.
 package main
 
 import (
@@ -11,12 +10,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/twmb/franz-go/pkg/kgo"
-
 	"saybu/pkg/config"
 	"saybu/pkg/httpx"
+	"saybu/pkg/kafkax"
 	logpkg "saybu/pkg/logger"
 	"saybu/pkg/telemetry"
+	"saybu/services/notification/internal/service"
+	"saybu/services/notification/internal/telegram"
 )
 
 func main() {
@@ -26,19 +26,40 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	brokers := config.List("KAFKA_BROKERS", []string{"localhost:29092"})
-	kafka, err := kgo.NewClient(kgo.SeedBrokers(brokers...))
-	if err != nil {
-		log.Error("kafka client gagal", "error", err)
-		os.Exit(1)
+	telegramClient := telegram.NewClient(
+		config.Get("TELEGRAM_BOT_TOKEN", ""),
+		config.Get("TELEGRAM_ADMIN_CHAT_ID", ""),
+	)
+	if !telegramClient.Enabled() {
+		log.Warn("telegram nonaktif: TELEGRAM_BOT_TOKEN/TELEGRAM_ADMIN_CHAT_ID kosong; notifikasi dilewati")
 	}
-	defer kafka.Close()
+
+	notifier := service.New(telegramClient, log)
 
 	metrics := telemetry.NewMetrics("notification")
-	mux := httpx.NewAdminMux(metrics, httpx.NamedCheck{
-		Name:  "kafka",
-		Check: func(ctx context.Context) error { return kafka.Ping(ctx) },
-	})
+	checks := []httpx.NamedCheck{}
+
+	// Konsumer event pesanan + pembayaran -> notifikasi Telegram.
+	if brokers := config.List("KAFKA_BROKERS", nil); len(brokers) > 0 {
+		consumer, err := kafkax.NewConsumer(brokers, "notification-svc",
+			[]string{"order.events.v1", "payment.events.v1"}, notifier.HandleEvent, log)
+		if err != nil {
+			log.Error("konsumer event gagal disiapkan", "error", err)
+			os.Exit(1)
+		}
+		defer consumer.Close()
+		go func() {
+			if err := consumer.Run(ctx); err != nil {
+				log.Error("konsumer event berhenti", "error", err)
+			}
+		}()
+
+		checks = append(checks, httpx.NamedCheck{Name: "kafka", Check: consumer.Ping})
+	} else {
+		log.Warn("KAFKA_BROKERS kosong; konsumer notifikasi tidak dijalankan")
+	}
+
+	mux := httpx.NewAdminMux(metrics, checks...)
 	mux.HandleFunc("GET /api/v1/version", func(w http.ResponseWriter, r *http.Request) {
 		httpx.Data(w, http.StatusOK, map[string]string{"service": "notification", "version": "0.1.0"})
 	})

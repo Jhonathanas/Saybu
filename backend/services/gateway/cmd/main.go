@@ -19,6 +19,7 @@ import (
 	authv1 "saybu/gen/saybu/auth/v1"
 	catalogv1 "saybu/gen/saybu/catalog/v1"
 	orderv1 "saybu/gen/saybu/order/v1"
+	paymentv1 "saybu/gen/saybu/payment/v1"
 	shippingv1 "saybu/gen/saybu/shipping/v1"
 	"saybu/pkg/authn"
 	"saybu/pkg/config"
@@ -88,6 +89,16 @@ func main() {
 	orderClient := orderv1.NewOrderServiceClient(orderConn)
 	orderHealth := grpc_health_v1.NewHealthClient(orderConn)
 
+	paymentConn, err := grpcx.Dial(config.Get("PAYMENT_GRPC_ADDR", "localhost:50055"))
+	if err != nil {
+		log.Error("koneksi payment gagal", "error", err)
+		os.Exit(1)
+	}
+	defer paymentConn.Close()
+
+	paymentClient := paymentv1.NewPaymentServiceClient(paymentConn)
+	paymentHealth := grpc_health_v1.NewHealthClient(paymentConn)
+
 	uploads, err := storage.NewDisk(
 		config.Get("UPLOAD_DIR", "./data/uploads"),
 		config.Get("UPLOAD_URL_PREFIX", "/uploads"),
@@ -106,6 +117,19 @@ func main() {
 	shippingHandler := handlers.NewShipping(shippingClient, log)
 
 	orderHandler := handlers.NewOrder(orderClient, log, ratelimit.New(10, time.Minute))
+
+	paymentHandler := handlers.NewPayment(
+		paymentClient,
+		log,
+		uploads,
+		config.Int64("UPLOAD_MAX_BYTES", 5<<20),
+		ratelimit.New(5, time.Minute),
+		handlers.BankInfo{
+			Name:          config.Get("BANK_NAME", ""),
+			AccountNumber: config.Get("BANK_ACCOUNT", ""),
+			AccountHolder: config.Get("BANK_HOLDER", ""),
+		},
+	)
 
 	cookieSecure := config.Bool("COOKIE_SECURE", config.Get("APP_ENV", "development") == "production")
 	authHandler := handlers.NewAuth(authClient, log, handlers.CookieConfig{
@@ -177,6 +201,19 @@ func main() {
 				return nil
 			},
 		},
+		httpx.NamedCheck{
+			Name: "payment",
+			Check: func(ctx context.Context) error {
+				resp, err := paymentHealth.Check(ctx, &grpc_health_v1.HealthCheckRequest{Service: "payment"})
+				if err != nil {
+					return err
+				}
+				if resp.GetStatus() != grpc_health_v1.HealthCheckResponse_SERVING {
+					return fmt.Errorf("status payment: %s", resp.GetStatus())
+				}
+				return nil
+			},
+		},
 	))
 	r.Handle("/metrics", metrics.Handler())
 
@@ -213,6 +250,8 @@ func main() {
 			r.Post("/orders", orderHandler.CreateOrder)
 			r.Get("/orders/{code}", orderHandler.GetOrder)
 			r.Post("/orders/{code}/cancel", orderHandler.CancelOrder)
+			r.Get("/orders/{code}/payment", paymentHandler.GetPayment)
+			r.Post("/orders/{code}/payment-proof", paymentHandler.UploadProof)
 		})
 
 		r.Group(func(r chi.Router) {
@@ -235,6 +274,9 @@ func main() {
 				r.Post("/shipping/zones", shippingHandler.CreateZone)
 				r.Patch("/shipping/zones/{id}", shippingHandler.UpdateZone)
 				r.Delete("/shipping/zones/{id}", shippingHandler.DeleteZone)
+
+				r.Get("/payments", paymentHandler.AdminListPayments)
+				r.Post("/payments/{id}/verify", paymentHandler.AdminVerifyPayment)
 			})
 		})
 	})

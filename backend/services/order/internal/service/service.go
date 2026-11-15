@@ -41,6 +41,7 @@ type Repo interface {
 	ListOrdersByUser(ctx context.Context, userID string, page, limit int) ([]domain.Order, int64, error)
 	CreateOrder(ctx context.Context, o domain.Order, idem repo.Idempotency, events func(domain.Order) ([]outbox.Record, error)) (domain.Order, error)
 	Transition(ctx context.Context, id, from, to, note, actor string, events func(domain.Order) ([]outbox.Record, error)) (domain.Order, error)
+	TransitionFromPayment(ctx context.Context, eventID, eventType, orderID, from, to, note, actor string, events func(domain.Order) ([]outbox.Record, error)) (domain.Order, bool, error)
 	ExpireDue(ctx context.Context, limit int, events func(domain.Order) ([]outbox.Record, error)) ([]domain.Order, error)
 }
 
@@ -394,6 +395,7 @@ func (s *Service) orderCreatedEvent(o domain.Order) ([]outbox.Record, error) {
 	payload := map[string]any{
 		"order_id":       o.ID,
 		"code":           o.Code,
+		"user_id":        o.UserID,
 		"customer":       map[string]any{"name": o.Customer.Name, "phone": o.Customer.Phone},
 		"fulfillment":    o.Fulfillment,
 		"payment_method": o.PaymentMethod,
@@ -446,6 +448,87 @@ func itemRefs(items []domain.Item) []map[string]any {
 		out = append(out, map[string]any{"product_id": it.ProductID, "qty": it.Qty})
 	}
 	return out
+}
+
+// HandlePaymentEvent memproses event dari payment.events.v1 dan memindahkan
+// status pesanan sesuai hasil pembayaran. Idempotent lewat processed_events.
+func (s *Service) HandlePaymentEvent(ctx context.Context, ev kafkax.Event) error {
+	var p struct {
+		OrderID    string `json:"order_id"`
+		Code       string `json:"code"`
+		Reason     string `json:"reason"`
+		VerifiedBy string `json:"verified_by"`
+	}
+	if err := json.Unmarshal(ev.Payload, &p); err != nil {
+		return fmt.Errorf("service: payload %s tidak valid: %w", ev.Type, err)
+	}
+	if strings.TrimSpace(p.OrderID) == "" {
+		return fmt.Errorf("service: event %s tanpa order_id", ev.Type)
+	}
+
+	var from, to, note, actor string
+	switch ev.Type {
+	case "payment.proof_uploaded":
+		from = domain.StatusPendingPayment
+		to = domain.StatusWaitingVerification
+		note = "Bukti transfer diunggah"
+		actor = "customer"
+	case "payment.confirmed":
+		from = domain.StatusWaitingVerification
+		to = domain.StatusPaid
+		note = "Pembayaran diverifikasi"
+		actor = actorOr(p.VerifiedBy, "admin")
+	case "payment.rejected":
+		from = domain.StatusWaitingVerification
+		to = domain.StatusPendingPayment
+		note = "Bukti transfer ditolak"
+		if strings.TrimSpace(p.Reason) != "" {
+			note += ": " + strings.TrimSpace(p.Reason)
+		}
+		actor = actorOr(p.VerifiedBy, "admin")
+	default:
+		return nil
+	}
+
+	order, applied, err := s.repo.TransitionFromPayment(ctx, ev.EventID, ev.Type, p.OrderID,
+		from, to, note, actor,
+		func(o domain.Order) ([]outbox.Record, error) {
+			return s.statusChangedEvent(o, from, to, actor, note)
+		})
+	if err != nil {
+		return err
+	}
+	if !applied {
+		s.log.Debug("transisi dari event pembayaran tidak diterapkan",
+			"type", ev.Type, "order_id", p.OrderID, "from", from)
+		return nil
+	}
+	s.log.Info("status pesanan berubah dari event pembayaran",
+		"type", ev.Type, "code", order.Code, "from", from, "to", to)
+	return nil
+}
+
+func (s *Service) statusChangedEvent(o domain.Order, from, to, actor, note string) ([]outbox.Record, error) {
+	payload := map[string]any{
+		"order_id": o.ID,
+		"code":     o.Code,
+		"from":     from,
+		"to":       to,
+		"by":       actor,
+		"note":     note,
+	}
+	rec, err := newRecord("order.status_changed", o.ID, payload)
+	if err != nil {
+		return nil, err
+	}
+	return []outbox.Record{rec}, nil
+}
+
+func actorOr(actor, def string) string {
+	if strings.TrimSpace(actor) == "" {
+		return def
+	}
+	return actor
 }
 
 func newRecord(eventType, key string, payload any) (outbox.Record, error) {

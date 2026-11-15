@@ -131,3 +131,6 @@ func eventID(b []byte) string {
 
 // Close menutup consumer.
 func (c *Consumer) Close() { c.client.Close() }
+
+// Ping memeriksa koneksi ke broker (untuk readiness).
+func (c *Consumer) Ping(ctx context.Context) error { return c.client.Ping(ctx) }

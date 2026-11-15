@@ -557,6 +557,39 @@ func (r *Repo) ConfirmStock(ctx context.Context, orderID string) error {
 	return nil
 }
 
+// ConfirmStockOnce menandai reservasi order CONFIRMED untuk sebuah event,
+// idempotent terhadap event_id. Mengembalikan processed=false bila event sudah
+// pernah diproses.
+func (r *Repo) ConfirmStockOnce(ctx context.Context, eventID, orderID string) (bool, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return false, fmt.Errorf("repo: begin confirm once: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	tag, err := tx.Exec(ctx, `
+		INSERT INTO processed_events (event_id) VALUES ($1)
+		ON CONFLICT (event_id) DO NOTHING
+	`, eventID)
+	if err != nil {
+		return false, fmt.Errorf("repo: insert processed event: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return false, nil // sudah diproses
+	}
+
+	if _, err := tx.Exec(ctx, `
+		UPDATE stock_reservations SET status = 'CONFIRMED', updated_at = now()
+		WHERE order_id = $1 AND status = 'RESERVED'
+	`, orderID); err != nil {
+		return false, fmt.Errorf("repo: confirm stock once: %w", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return false, fmt.Errorf("repo: commit confirm once: %w", err)
+	}
+	return true, nil
+}
+
 func insertImages(ctx context.Context, tx pgx.Tx, productID string, urls []string) error {
 	for i, url := range urls {
 		if strings.TrimSpace(url) == "" {

@@ -17,6 +17,7 @@ type fakeRepo struct {
 	lastLim     int
 	created     []domain.Product
 	releaseOnce []string
+	confirmOnce []string
 }
 
 func newFake() *fakeRepo {
@@ -93,6 +94,10 @@ func (f *fakeRepo) ReserveStock(context.Context, string, []domain.StockItem) ([]
 func (f *fakeRepo) ReleaseStock(context.Context, string) error { return nil }
 func (f *fakeRepo) ReleaseStockOnce(_ context.Context, eventID, orderID string) (bool, error) {
 	f.releaseOnce = append(f.releaseOnce, eventID+":"+orderID)
+	return true, nil
+}
+func (f *fakeRepo) ConfirmStockOnce(_ context.Context, eventID, orderID string) (bool, error) {
+	f.confirmOnce = append(f.confirmOnce, eventID+":"+orderID)
 	return true, nil
 }
 

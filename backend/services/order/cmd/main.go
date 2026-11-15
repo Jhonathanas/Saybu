@@ -81,6 +81,20 @@ func main() {
 		relay := outbox.NewRelay(outbox.NewStore(pool), producer, log)
 		go relay.Run(ctx)
 
+		// Konsumer event pembayaran: bukti/verifikasi menaikkan status pesanan.
+		consumer, err := kafkax.NewConsumer(brokers, "order-svc",
+			[]string{"payment.events.v1"}, svc.HandlePaymentEvent, log)
+		if err != nil {
+			log.Error("konsumer payment.events gagal disiapkan", "error", err)
+			os.Exit(1)
+		}
+		defer consumer.Close()
+		go func() {
+			if err := consumer.Run(ctx); err != nil {
+				log.Error("konsumer payment.events berhenti", "error", err)
+			}
+		}()
+
 		checks = append(checks, httpx.NamedCheck{Name: "kafka", Check: producer.Ping})
 	}
 

@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package saybu.payment.v1;
+
+option go_package = "saybu/gen/saybu/payment/v1;paymentv1";
+
+// PaymentService menangani pembayaran manual (transfer bank) dan COD:
+// status pembayaran, bukti transfer, dan verifikasi admin.
+//
+// Pembayaran dibuat otomatis saat konsumer menerima event `order.created`
+// (lihat docs/API_SPEC.md §9.1) sehingga pesanan dan pembayaran selalu
+// sinkron. Bukti transfer disimpan oleh gateway (disk lokal) lalu URL-nya
+// didaftarkan lewat UploadProof.
+service PaymentService {
+  // GetPaymentByOrderCode mengambil status pembayaran untuk sebuah kode
+  // pesanan. Guest wajib menyertakan nomor HP; pemilik akun boleh tanpa HP.
+  rpc GetPaymentByOrderCode(GetPaymentByOrderCodeRequest) returns (Payment);
+
+  // UploadProof mendaftarkan bukti transfer (URL hasil unggahan gateway).
+  rpc UploadProof(UploadProofRequest) returns (Payment);
+
+  // ListPayments mengambil daftar pembayaran untuk panel admin.
+  rpc ListPayments(ListPaymentsRequest) returns (ListPaymentsResponse);
+
+  // VerifyPayment menyetujui atau menolak bukti transfer (admin).
+  rpc VerifyPayment(VerifyPaymentRequest) returns (Payment);
+}
+
+// Payment adalah status pembayaran sebuah pesanan.
+message Payment {
+  string id = 1;
+  string order_id = 2;
+  string order_code = 3;
+  string method = 4; // TRANSFER | COD
+  string status = 5; // UNPAID | WAITING_VERIFICATION | PAID | REJECTED | CANCELLED | COD_PENDING | COD_PAID
+  int64 amount = 6;
+  string customer_name = 7;
+  string customer_phone = 8;
+  string proof_url = 9;
+  string proof_uploaded_at = 10;
+  string verified_at = 11;
+  string verified_by = 12;
+  string note = 13;
+  string created_at = 14;
+  string updated_at = 15;
+}
+
+message GetPaymentByOrderCodeRequest {
+  string code = 1;
+  string phone = 2;   // wajib untuk guest
+  string user_id = 3; // bila login
+}
+
+message UploadProofRequest {
+  string code = 1;
+  string phone = 2;      // wajib untuk guest
+  string user_id = 3;    // bila login
+  string proof_url = 4;  // URL publik hasil unggahan gateway
+  int64 size_bytes = 5;  // ukuran berkas (informasi)
+  string content_type = 6; // tipe konten terdeteksi (informasi)
+}
+
+message ListPaymentsRequest {
+  string status = 1; // filter opsional, mis. WAITING_VERIFICATION
+  int32 page = 2;
+  int32 limit = 3;
+}
+
+message ListPaymentsResponse {
+  repeated Payment payments = 1;
+  int32 page = 2;
+  int32 limit = 3;
+  int64 total = 4;
+}
+
+message VerifyPaymentRequest {
+  string id = 1;
+  string decision = 2; // APPROVE | REJECT
+  string note = 3;
+  string admin_id = 4;
+}

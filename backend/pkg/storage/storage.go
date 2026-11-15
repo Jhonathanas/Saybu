@@ -30,6 +30,15 @@ var AllowedExt = map[string]bool{
 	".webp": true,
 }
 
+// AllowedProofExt adalah ekstensi bukti pembayaran yang diterima
+// (gambar atau PDF).
+var AllowedProofExt = map[string]bool{
+	".jpg":  true,
+	".jpeg": true,
+	".png":  true,
+	".pdf":  true,
+}
+
 // Storage menyimpan dan menghapus berkas unggahan.
 type Storage interface {
 	// Save menyimpan isi berkas dengan ekstensi tertentu dan mengembalikan
@@ -71,8 +80,14 @@ func (d *Disk) Dir() string { return d.dir }
 
 // Save menulis berkas ke {dir}/{yyyy}/{mm}/{uuid}{ext}.
 func (d *Disk) Save(ctx context.Context, ext string, r io.Reader) (string, error) {
+	return d.SaveWith(ctx, ext, r, AllowedExt)
+}
+
+// SaveWith menulis berkas dengan allow-list ekstensi tertentu. Dipakai untuk
+// unggahan non-gambar (mis. bukti transfer PDF).
+func (d *Disk) SaveWith(ctx context.Context, ext string, r io.Reader, allowed map[string]bool) (string, error) {
 	ext = normalizeExt(ext)
-	if !AllowedExt[ext] {
+	if !allowed[ext] {
 		return "", fmt.Errorf("storage: ekstensi %q tidak didukung", ext)
 	}
 
