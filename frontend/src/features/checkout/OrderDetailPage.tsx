@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { Alert, Spinner } from '@/components/ui/Feedback'
 import { useAuth } from '@/features/auth/AuthProvider'
+import { PaymentPanel } from '@/features/payment/PaymentPanel'
 import { ApiError } from '@/lib/api'
 import { cancelOrder, getOrder } from './api'
 import { OrderDetailView } from './OrderDetailView'
@@ -99,7 +100,6 @@ export function OrderDetailPage() {
 
       <OrderDetailView
         order={order}
-        showPaymentInstructions
         onCancel={
           isCancellable(order.status) && !confirming
             ? () => setConfirming(true)
@@ -108,6 +108,8 @@ export function OrderDetailPage() {
         cancelling={cancelling}
         cancelError={cancelError}
       />
+
+      <PaymentPanel order={order} phone={phone} />
 
       {confirming && (
         <div className="flex flex-col gap-3 rounded-2xl border border-red-200 bg-red-50 p-4">

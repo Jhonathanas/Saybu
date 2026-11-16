@@ -35,6 +35,8 @@ function order(overrides: Partial<Order> = {}): Order {
   }
 }
 
+// Instruksi pembayaran & unggah bukti kini berada di PaymentPanel
+// (features/payment), jadi tidak diuji di sini.
 describe('OrderDetailView', () => {
   it('menampilkan kode, item, dan total', () => {
     render(<OrderDetailView order={order()} />)
@@ -44,21 +46,13 @@ describe('OrderDetailView', () => {
     expect(screen.getAllByText(/Rp\s?98\.000/).length).toBeGreaterThanOrEqual(1)
   })
 
-  it('menampilkan instruksi transfer bank saat belum dibayar', () => {
-    render(<OrderDetailView order={order()} showPaymentInstructions />)
-    expect(screen.getByText('Instruksi pembayaran')).toBeInTheDocument()
-    expect(screen.getByText('1234567890')).toBeInTheDocument()
-    expect(screen.getByText('Saybu Buah & Sayur')).toBeInTheDocument()
+  it('menampilkan alasan batal bila ada', () => {
+    render(<OrderDetailView order={order({ status: 'CANCELLED', cancel_reason: 'Stok habis' })} />)
+    expect(screen.getByText('Alasan batal: Stok habis')).toBeInTheDocument()
   })
 
-  it('tidak menampilkan instruksi transfer untuk COD', () => {
-    render(<OrderDetailView order={order({ payment_method: 'COD' })} showPaymentInstructions />)
-    expect(screen.queryByText('Instruksi pembayaran')).not.toBeInTheDocument()
-    expect(screen.getByText(/bayar saat pesanan diterima/i)).toBeInTheDocument()
-  })
-
-  it('menyembunyikan instruksi transfer saat status bukan menunggu bayar', () => {
-    render(<OrderDetailView order={order({ status: 'PAID' })} showPaymentInstructions />)
-    expect(screen.queryByText('Instruksi pembayaran')).not.toBeInTheDocument()
+  it('menampilkan tombol batalkan pesanan bila diberi handler', () => {
+    render(<OrderDetailView order={order()} onCancel={() => {}} />)
+    expect(screen.getByRole('button', { name: 'Batalkan pesanan' })).toBeInTheDocument()
   })
 })

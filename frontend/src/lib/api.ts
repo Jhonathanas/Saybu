@@ -209,9 +209,18 @@ export function refreshSession(): Promise<string | null> {
   return refreshAccessToken()
 }
 
-async function sendForm(path: string, file: File): Promise<Response> {
+async function sendForm(
+  path: string,
+  file: File,
+  fields?: Record<string, string>,
+): Promise<Response> {
   const form = new FormData()
   form.append('file', file)
+  if (fields) {
+    for (const [key, value] of Object.entries(fields)) {
+      form.append(key, value)
+    }
+  }
 
   const headers: Record<string, string> = { Accept: 'application/json' }
   if (accessToken) {
@@ -230,13 +239,20 @@ async function sendForm(path: string, file: File): Promise<Response> {
   }
 }
 
-/** uploadFile mengirim satu berkas (multipart) dengan penanganan 401 terpusat. */
-export async function uploadFile<T>(path: string, file: File): Promise<T> {
-  let res = await sendForm(path, file)
+/**
+ * uploadFile mengirim satu berkas (multipart) dengan penanganan 401 terpusat.
+ * `fields` menambahkan field form teks, mis. `phone` untuk pemesanan guest.
+ */
+export async function uploadFile<T>(
+  path: string,
+  file: File,
+  fields?: Record<string, string>,
+): Promise<T> {
+  let res = await sendForm(path, file, fields)
   if (res.status === 401) {
     const token = await refreshAccessToken()
     if (token) {
-      res = await sendForm(path, file)
+      res = await sendForm(path, file, fields)
     }
   }
   if (!res.ok) {

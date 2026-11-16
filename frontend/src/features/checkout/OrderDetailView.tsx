@@ -1,8 +1,6 @@
-import { useState } from 'react'
-import { toast } from 'sonner'
 import { Alert } from '@/components/ui/Feedback'
 import { Button } from '@/components/ui/Button'
-import { BANK } from '@/lib/env'
+import { CopyButton } from '@/components/ui/CopyButton'
 import { formatDateTime, formatIDR } from '@/lib/format'
 import {
   fulfillmentLabel,
@@ -24,32 +22,8 @@ export function StatusBadge({ status }: { status: string }) {
   )
 }
 
-/** CopyButton menyalin teks ke papan klip dengan umpan balik toast. */
-export function CopyButton({ value, label = 'Salin' }: { value: string; label?: string }) {
-  const [copied, setCopied] = useState(false)
-
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(value)
-      setCopied(true)
-      toast.success('Disalin ke papan klip')
-      window.setTimeout(() => setCopied(false), 2000)
-    } catch {
-      toast.error('Gagal menyalin. Salin manual ya.')
-    }
-  }
-
-  return (
-    <Button type="button" variant="secondary" size="sm" onClick={copy}>
-      {copied ? 'Tersalin ✓' : label}
-    </Button>
-  )
-}
-
 interface OrderDetailViewProps {
   order: Order
-  /** Tampilkan instruksi pembayaran transfer bila belum dibayar. */
-  showPaymentInstructions?: boolean
   onCancel?: () => void
   cancelling?: boolean
   cancelError?: string | null
@@ -58,14 +32,10 @@ interface OrderDetailViewProps {
 /** OrderDetailView merender rincian pesanan (dipakai halaman sukses & lacak). */
 export function OrderDetailView({
   order,
-  showPaymentInstructions = false,
   onCancel,
   cancelling = false,
   cancelError,
 }: OrderDetailViewProps) {
-  const transfer = order.payment_method === 'TRANSFER'
-  const showBank = showPaymentInstructions && transfer && isUnpaid(order.status)
-
   return (
     <div className="flex flex-col gap-5">
       <section className="rounded-2xl border border-stone-200 bg-white p-4">
@@ -97,50 +67,6 @@ export function OrderDetailView({
           <p className="mt-2 text-sm text-red-600">Alasan batal: {order.cancel_reason}</p>
         )}
       </section>
-
-      {showBank && (
-        <section className="rounded-2xl border border-brand-200 bg-brand-50 p-4">
-          <h2 className="font-semibold text-brand-900">Instruksi pembayaran</h2>
-          <p className="mt-1 text-sm text-brand-800">
-            Transfer tepat sebesar <strong>{formatIDR(order.total)}</strong> ke rekening berikut,
-            lalu konfirmasi ke admin via WhatsApp.
-          </p>
-          <dl className="mt-3 flex flex-col gap-2 text-sm">
-            <div className="flex items-center justify-between gap-3">
-              <dt className="text-brand-800">Bank</dt>
-              <dd className="font-medium text-brand-900">{BANK.name}</dd>
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <dt className="text-brand-800">Nomor rekening</dt>
-              <dd className="flex items-center gap-2 font-mono font-medium text-brand-900">
-                {BANK.account}
-                <CopyButton value={BANK.account} />
-              </dd>
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <dt className="text-brand-800">Atas nama</dt>
-              <dd className="font-medium text-brand-900">{BANK.holder}</dd>
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <dt className="text-brand-800">Jumlah</dt>
-              <dd className="flex items-center gap-2 font-medium text-brand-900">
-                {formatIDR(order.total)}
-                <CopyButton value={String(order.total)} />
-              </dd>
-            </div>
-          </dl>
-          <p className="mt-3 text-xs text-brand-800">
-            Sertakan kode <span className="font-mono font-semibold">{order.code}</span> pada berita
-            transfer agar admin mudah memverifikasi.
-          </p>
-        </section>
-      )}
-
-      {showPaymentInstructions && !transfer && order.status === 'PENDING_PAYMENT' && (
-        <Alert tone="info">
-          Pesanan COD — bayar saat pesanan diterima/diambil. Tidak perlu transfer.
-        </Alert>
-      )}
 
       <section className="rounded-2xl border border-stone-200 bg-white p-4">
         <h2 className="font-semibold text-stone-900">Produk</h2>

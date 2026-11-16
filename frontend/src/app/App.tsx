@@ -14,6 +14,7 @@ import { CheckoutPage } from '@/features/checkout/CheckoutPage'
 import { OrderDetailPage } from '@/features/checkout/OrderDetailPage'
 import { OrderTrackingPage } from '@/features/checkout/OrderTrackingPage'
 import { AdminDashboardPage } from '@/features/admin/AdminDashboardPage'
+import { AdminPaymentsPage } from '@/features/admin/AdminPaymentsPage'
 import { AdminProductsPage } from '@/features/admin/AdminProductsPage'
 import { AdminUsersPage } from '@/features/admin/AdminUsersPage'
 
@@ -40,6 +41,7 @@ export function App() {
         <Route element={<AdminLayout />}>
           <Route index element={<AdminDashboardPage />} />
           <Route path="produk" element={<AdminProductsPage />} />
+          <Route path="pembayaran" element={<AdminPaymentsPage />} />
           <Route path="pengguna" element={<AdminUsersPage />} />
         </Route>
       </Route>
