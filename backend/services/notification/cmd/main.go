@@ -39,10 +39,10 @@ func main() {
 	metrics := telemetry.NewMetrics("notification")
 	checks := []httpx.NamedCheck{}
 
-	// Konsumer event pesanan + pembayaran -> notifikasi Telegram.
+	// Konsumer event pesanan + pembayaran + katalog -> notifikasi Telegram.
 	if brokers := config.List("KAFKA_BROKERS", nil); len(brokers) > 0 {
 		consumer, err := kafkax.NewConsumer(brokers, "notification-svc",
-			[]string{"order.events.v1", "payment.events.v1"}, notifier.HandleEvent, log)
+			[]string{"order.events.v1", "payment.events.v1", "catalog.events.v1"}, notifier.HandleEvent, log)
 		if err != nil {
 			log.Error("konsumer event gagal disiapkan", "error", err)
 			os.Exit(1)

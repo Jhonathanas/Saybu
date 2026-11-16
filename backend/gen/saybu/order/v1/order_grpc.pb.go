@@ -23,6 +23,10 @@ const (
 	OrderService_GetOrderByCode_FullMethodName = "/saybu.order.v1.OrderService/GetOrderByCode"
 	OrderService_ListMyOrders_FullMethodName   = "/saybu.order.v1.OrderService/ListMyOrders"
 	OrderService_CancelOrder_FullMethodName    = "/saybu.order.v1.OrderService/CancelOrder"
+	OrderService_GetOrderByID_FullMethodName   = "/saybu.order.v1.OrderService/GetOrderByID"
+	OrderService_ListOrders_FullMethodName     = "/saybu.order.v1.OrderService/ListOrders"
+	OrderService_UpdateStatus_FullMethodName   = "/saybu.order.v1.OrderService/UpdateStatus"
+	OrderService_GetTodayStats_FullMethodName  = "/saybu.order.v1.OrderService/GetTodayStats"
 )
 
 // OrderServiceClient is the client API for OrderService service.
@@ -39,6 +43,11 @@ type OrderServiceClient interface {
 	GetOrderByCode(ctx context.Context, in *GetOrderByCodeRequest, opts ...grpc.CallOption) (*Order, error)
 	ListMyOrders(ctx context.Context, in *ListMyOrdersRequest, opts ...grpc.CallOption) (*ListOrdersResponse, error)
 	CancelOrder(ctx context.Context, in *CancelOrderRequest, opts ...grpc.CallOption) (*Order, error)
+	// RPC admin (dipakai gateway untuk panel admin).
+	GetOrderByID(ctx context.Context, in *GetOrderByIDRequest, opts ...grpc.CallOption) (*Order, error)
+	ListOrders(ctx context.Context, in *ListOrdersRequest, opts ...grpc.CallOption) (*ListOrdersResponse, error)
+	UpdateStatus(ctx context.Context, in *UpdateStatusRequest, opts ...grpc.CallOption) (*Order, error)
+	GetTodayStats(ctx context.Context, in *GetTodayStatsRequest, opts ...grpc.CallOption) (*TodayStats, error)
 }
 
 type orderServiceClient struct {
@@ -89,6 +98,46 @@ func (c *orderServiceClient) CancelOrder(ctx context.Context, in *CancelOrderReq
 	return out, nil
 }
 
+func (c *orderServiceClient) GetOrderByID(ctx context.Context, in *GetOrderByIDRequest, opts ...grpc.CallOption) (*Order, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Order)
+	err := c.cc.Invoke(ctx, OrderService_GetOrderByID_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *orderServiceClient) ListOrders(ctx context.Context, in *ListOrdersRequest, opts ...grpc.CallOption) (*ListOrdersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListOrdersResponse)
+	err := c.cc.Invoke(ctx, OrderService_ListOrders_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *orderServiceClient) UpdateStatus(ctx context.Context, in *UpdateStatusRequest, opts ...grpc.CallOption) (*Order, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Order)
+	err := c.cc.Invoke(ctx, OrderService_UpdateStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *orderServiceClient) GetTodayStats(ctx context.Context, in *GetTodayStatsRequest, opts ...grpc.CallOption) (*TodayStats, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(TodayStats)
+	err := c.cc.Invoke(ctx, OrderService_GetTodayStats_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // OrderServiceServer is the server API for OrderService service.
 // All implementations must embed UnimplementedOrderServiceServer
 // for forward compatibility.
@@ -103,6 +152,11 @@ type OrderServiceServer interface {
 	GetOrderByCode(context.Context, *GetOrderByCodeRequest) (*Order, error)
 	ListMyOrders(context.Context, *ListMyOrdersRequest) (*ListOrdersResponse, error)
 	CancelOrder(context.Context, *CancelOrderRequest) (*Order, error)
+	// RPC admin (dipakai gateway untuk panel admin).
+	GetOrderByID(context.Context, *GetOrderByIDRequest) (*Order, error)
+	ListOrders(context.Context, *ListOrdersRequest) (*ListOrdersResponse, error)
+	UpdateStatus(context.Context, *UpdateStatusRequest) (*Order, error)
+	GetTodayStats(context.Context, *GetTodayStatsRequest) (*TodayStats, error)
 	mustEmbedUnimplementedOrderServiceServer()
 }
 
@@ -124,6 +178,18 @@ func (UnimplementedOrderServiceServer) ListMyOrders(context.Context, *ListMyOrde
 }
 func (UnimplementedOrderServiceServer) CancelOrder(context.Context, *CancelOrderRequest) (*Order, error) {
 	return nil, status.Error(codes.Unimplemented, "method CancelOrder not implemented")
+}
+func (UnimplementedOrderServiceServer) GetOrderByID(context.Context, *GetOrderByIDRequest) (*Order, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetOrderByID not implemented")
+}
+func (UnimplementedOrderServiceServer) ListOrders(context.Context, *ListOrdersRequest) (*ListOrdersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListOrders not implemented")
+}
+func (UnimplementedOrderServiceServer) UpdateStatus(context.Context, *UpdateStatusRequest) (*Order, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateStatus not implemented")
+}
+func (UnimplementedOrderServiceServer) GetTodayStats(context.Context, *GetTodayStatsRequest) (*TodayStats, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetTodayStats not implemented")
 }
 func (UnimplementedOrderServiceServer) mustEmbedUnimplementedOrderServiceServer() {}
 func (UnimplementedOrderServiceServer) testEmbeddedByValue()                      {}
@@ -218,6 +284,78 @@ func _OrderService_CancelOrder_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OrderService_GetOrderByID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetOrderByIDRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrderServiceServer).GetOrderByID(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrderService_GetOrderByID_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrderServiceServer).GetOrderByID(ctx, req.(*GetOrderByIDRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrderService_ListOrders_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListOrdersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrderServiceServer).ListOrders(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrderService_ListOrders_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrderServiceServer).ListOrders(ctx, req.(*ListOrdersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrderService_UpdateStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrderServiceServer).UpdateStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrderService_UpdateStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrderServiceServer).UpdateStatus(ctx, req.(*UpdateStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrderService_GetTodayStats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetTodayStatsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrderServiceServer).GetTodayStats(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrderService_GetTodayStats_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrderServiceServer).GetTodayStats(ctx, req.(*GetTodayStatsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // OrderService_ServiceDesc is the grpc.ServiceDesc for OrderService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -240,6 +378,22 @@ var OrderService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CancelOrder",
 			Handler:    _OrderService_CancelOrder_Handler,
+		},
+		{
+			MethodName: "GetOrderByID",
+			Handler:    _OrderService_GetOrderByID_Handler,
+		},
+		{
+			MethodName: "ListOrders",
+			Handler:    _OrderService_ListOrders_Handler,
+		},
+		{
+			MethodName: "UpdateStatus",
+			Handler:    _OrderService_UpdateStatus_Handler,
+		},
+		{
+			MethodName: "GetTodayStats",
+			Handler:    _OrderService_GetTodayStats_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

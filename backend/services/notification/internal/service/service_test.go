@@ -65,6 +65,34 @@ func TestBuildMessageIgnoresUnknown(t *testing.T) {
 	}
 }
 
+func TestStockLowMessage(t *testing.T) {
+	n := newNotifier()
+
+	kg, ok := n.buildMessage(event("stock.low", map[string]any{
+		"product_id": "p1", "name": "Pisang Cavendish", "remaining": 1500, "unit": "kg", "threshold": 5000,
+	}))
+	if !ok {
+		t.Fatal("stock.low harus menghasilkan pesan")
+	}
+	for _, want := range []string{"Stok menipis", "Pisang Cavendish", "1,5 kg", "5 kg"} {
+		if !strings.Contains(kg, want) {
+			t.Errorf("pesan tidak memuat %q:\n%s", want, kg)
+		}
+	}
+
+	ikat, _ := n.buildMessage(event("stock.low", map[string]any{
+		"name": "Bayam", "remaining": 3, "unit": "ikat", "threshold": 5,
+	}))
+	if !strings.Contains(ikat, "3 ikat") || !strings.Contains(ikat, "5 ikat") {
+		t.Errorf("ikat = %q", ikat)
+	}
+
+	// Nama kosong: tidak ada pesan.
+	if _, ok := n.buildMessage(event("stock.low", map[string]any{"remaining": 1, "unit": "pcs"})); ok {
+		t.Fatal("stock.low tanpa nama harus diabaikan")
+	}
+}
+
 func TestBuildMessageBadPayload(t *testing.T) {
 	n := newNotifier()
 	ev := kafkax.Event{EventID: "e", Type: "order.created", Payload: json.RawMessage(`not-json`)}

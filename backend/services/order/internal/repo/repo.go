@@ -203,6 +203,97 @@ func (r *Repo) ListOrdersByUser(ctx context.Context, userID string, page, limit 
 	return out, total, nil
 }
 
+// ListOrders mengambil daftar pesanan untuk admin dengan filter & paginasi.
+// Item dimuat agar ringkasan bisa ditampilkan; riwayat tidak dimuat.
+func (r *Repo) ListOrders(ctx context.Context, f domain.ListOrdersFilter) ([]domain.Order, int64, error) {
+	where, args := orderFilterWhere(f)
+
+	var total int64
+	if err := r.pool.QueryRow(ctx, `SELECT count(*) FROM orders o `+where, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("repo: count admin orders: %w", err)
+	}
+
+	limIdx := len(args) + 1
+	offIdx := len(args) + 2
+	queryArgs := append(args, f.Limit, (f.Page-1)*f.Limit)
+
+	rows, err := r.pool.Query(ctx, fmt.Sprintf(`
+		SELECT %s
+		FROM orders o %s
+		ORDER BY o.created_at DESC, o.id DESC
+		LIMIT $%d OFFSET $%d
+	`, orderColumns, where, limIdx, offIdx), queryArgs...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("repo: list admin orders: %w", err)
+	}
+	defer rows.Close()
+
+	var out []domain.Order
+	for rows.Next() {
+		o, err := scanOrder(rows)
+		if err != nil {
+			return nil, 0, fmt.Errorf("repo: scan admin order: %w", err)
+		}
+		out = append(out, o)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("repo: rows admin orders: %w", err)
+	}
+	for i := range out {
+		if err := loadItems(ctx, r.pool, &out[i]); err != nil {
+			return nil, 0, err
+		}
+	}
+	return out, total, nil
+}
+
+// orderFilterWhere membangun klausa WHERE untuk filter daftar pesanan admin.
+func orderFilterWhere(f domain.ListOrdersFilter) (string, []any) {
+	var conds []string
+	var args []any
+	if f.Status != "" {
+		args = append(args, f.Status)
+		conds = append(conds, fmt.Sprintf("o.status = $%d", len(args)))
+	}
+	if f.DateFrom != "" {
+		args = append(args, f.DateFrom)
+		conds = append(conds, fmt.Sprintf("(o.created_at AT TIME ZONE 'Asia/Jakarta')::date >= $%d::date", len(args)))
+	}
+	if f.DateTo != "" {
+		args = append(args, f.DateTo)
+		conds = append(conds, fmt.Sprintf("(o.created_at AT TIME ZONE 'Asia/Jakarta')::date <= $%d::date", len(args)))
+	}
+	if f.Query != "" {
+		args = append(args, "%"+f.Query+"%")
+		n := len(args)
+		conds = append(conds, fmt.Sprintf(
+			"(o.code ILIKE $%d OR o.customer_name ILIKE $%d OR o.customer_phone ILIKE $%d)", n, n, n))
+	}
+	if len(conds) == 0 {
+		return "", args
+	}
+	return "WHERE " + strings.Join(conds, " AND "), args
+}
+
+// TodayStats menghitung ringkasan operasional hari ini (Asia/Jakarta).
+func (r *Repo) TodayStats(ctx context.Context) (domain.TodayStats, error) {
+	var s domain.TodayStats
+	err := r.pool.QueryRow(ctx, `
+		SELECT
+			count(*) FILTER (
+				WHERE (o.created_at AT TIME ZONE 'Asia/Jakarta')::date = (now() AT TIME ZONE 'Asia/Jakarta')::date),
+			COALESCE(sum(o.total) FILTER (
+				WHERE (o.created_at AT TIME ZONE 'Asia/Jakarta')::date = (now() AT TIME ZONE 'Asia/Jakarta')::date
+				  AND o.status = ANY($1)), 0),
+			count(*) FILTER (WHERE o.status = 'WAITING_VERIFICATION')
+		FROM orders o
+	`, domain.RevenueStatuses).Scan(&s.OrdersCount, &s.RevenuePaid, &s.AwaitingVerification)
+	if err != nil {
+		return domain.TodayStats{}, fmt.Errorf("repo: today stats: %w", err)
+	}
+	return s, nil
+}
+
 // CreateOrder menyimpan pesanan + item + riwayat + idempotensi + event outbox
 // dalam satu transaksi. Kode pesanan dibuat dari counter harian.
 func (r *Repo) CreateOrder(ctx context.Context, o domain.Order, idem Idempotency, events func(domain.Order) ([]outbox.Record, error)) (domain.Order, error) {

@@ -23,6 +23,10 @@ type Service interface {
 	GetOrderByCode(ctx context.Context, code, phone, userID string) (domain.Order, error)
 	ListMyOrders(ctx context.Context, userID string, page, limit int) ([]domain.Order, int64, int, int, error)
 	CancelOrder(ctx context.Context, code, phone, userID, reason string) (domain.Order, error)
+	GetOrderByID(ctx context.Context, id string) (domain.Order, error)
+	ListOrders(ctx context.Context, f domain.ListOrdersFilter) ([]domain.Order, int64, int, int, error)
+	UpdateStatus(ctx context.Context, id, to, note, actor string) (domain.Order, error)
+	GetTodayStats(ctx context.Context) (domain.TodayStats, error)
 }
 
 // Server membungkus usecase pesanan sebagai gRPC.
@@ -100,6 +104,58 @@ func (s *Server) CancelOrder(ctx context.Context, req *orderv1.CancelOrderReques
 		return nil, s.toStatus(err)
 	}
 	return toProtoOrder(o), nil
+}
+
+// GetOrderByID mengambil pesanan berdasarkan id (admin).
+func (s *Server) GetOrderByID(ctx context.Context, req *orderv1.GetOrderByIDRequest) (*orderv1.Order, error) {
+	o, err := s.svc.GetOrderByID(ctx, req.GetId())
+	if err != nil {
+		return nil, s.toStatus(err)
+	}
+	return toProtoOrder(o), nil
+}
+
+// ListOrders mengambil daftar pesanan dengan filter (admin).
+func (s *Server) ListOrders(ctx context.Context, req *orderv1.ListOrdersRequest) (*orderv1.ListOrdersResponse, error) {
+	f := domain.ListOrdersFilter{
+		Status:   req.GetStatus(),
+		DateFrom: req.GetDateFrom(),
+		DateTo:   req.GetDateTo(),
+		Query:    req.GetQ(),
+		Page:     int(req.GetPage()),
+		Limit:    int(req.GetLimit()),
+	}
+	orders, total, page, limit, err := s.svc.ListOrders(ctx, f)
+	if err != nil {
+		return nil, s.toStatus(err)
+	}
+	out := &orderv1.ListOrdersResponse{Page: int32(page), Limit: int32(limit), Total: total}
+	for _, o := range orders {
+		out.Orders = append(out.Orders, toProtoOrder(o))
+	}
+	return out, nil
+}
+
+// UpdateStatus memindahkan status pesanan (admin).
+func (s *Server) UpdateStatus(ctx context.Context, req *orderv1.UpdateStatusRequest) (*orderv1.Order, error) {
+	o, err := s.svc.UpdateStatus(ctx, req.GetId(), req.GetStatus(), req.GetNote(), req.GetActor())
+	if err != nil {
+		return nil, s.toStatus(err)
+	}
+	return toProtoOrder(o), nil
+}
+
+// GetTodayStats mengambil ringkasan operasional hari ini (admin).
+func (s *Server) GetTodayStats(ctx context.Context, _ *orderv1.GetTodayStatsRequest) (*orderv1.TodayStats, error) {
+	st, err := s.svc.GetTodayStats(ctx)
+	if err != nil {
+		return nil, s.toStatus(err)
+	}
+	return &orderv1.TodayStats{
+		OrdersCount:          st.OrdersCount,
+		RevenuePaid:          st.RevenuePaid,
+		AwaitingVerification: st.AwaitingVerification,
+	}, nil
 }
 
 func toDomainAddress(a *orderv1.Address) domain.Address {

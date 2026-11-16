@@ -921,6 +921,298 @@ func (x *CancelOrderRequest) GetReason() string {
 	return ""
 }
 
+type GetOrderByIDRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetOrderByIDRequest) Reset() {
+	*x = GetOrderByIDRequest{}
+	mi := &file_saybu_order_v1_order_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetOrderByIDRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetOrderByIDRequest) ProtoMessage() {}
+
+func (x *GetOrderByIDRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saybu_order_v1_order_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetOrderByIDRequest.ProtoReflect.Descriptor instead.
+func (*GetOrderByIDRequest) Descriptor() ([]byte, []int) {
+	return file_saybu_order_v1_order_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *GetOrderByIDRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type ListOrdersRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Status        string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`                     // filter status (opsional)
+	DateFrom      string                 `protobuf:"bytes,2,opt,name=date_from,json=dateFrom,proto3" json:"date_from,omitempty"` // YYYY-MM-DD (opsional, inklusif, zona Asia/Jakarta)
+	DateTo        string                 `protobuf:"bytes,3,opt,name=date_to,json=dateTo,proto3" json:"date_to,omitempty"`       // YYYY-MM-DD (opsional, inklusif)
+	Q             string                 `protobuf:"bytes,4,opt,name=q,proto3" json:"q,omitempty"`                               // cari kode / nama / nomor HP pelanggan
+	Page          int32                  `protobuf:"varint,5,opt,name=page,proto3" json:"page,omitempty"`
+	Limit         int32                  `protobuf:"varint,6,opt,name=limit,proto3" json:"limit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListOrdersRequest) Reset() {
+	*x = ListOrdersRequest{}
+	mi := &file_saybu_order_v1_order_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListOrdersRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListOrdersRequest) ProtoMessage() {}
+
+func (x *ListOrdersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saybu_order_v1_order_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListOrdersRequest.ProtoReflect.Descriptor instead.
+func (*ListOrdersRequest) Descriptor() ([]byte, []int) {
+	return file_saybu_order_v1_order_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *ListOrdersRequest) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *ListOrdersRequest) GetDateFrom() string {
+	if x != nil {
+		return x.DateFrom
+	}
+	return ""
+}
+
+func (x *ListOrdersRequest) GetDateTo() string {
+	if x != nil {
+		return x.DateTo
+	}
+	return ""
+}
+
+func (x *ListOrdersRequest) GetQ() string {
+	if x != nil {
+		return x.Q
+	}
+	return ""
+}
+
+func (x *ListOrdersRequest) GetPage() int32 {
+	if x != nil {
+		return x.Page
+	}
+	return 0
+}
+
+func (x *ListOrdersRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+type UpdateStatusRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Status        string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"` // status tujuan
+	Note          string                 `protobuf:"bytes,3,opt,name=note,proto3" json:"note,omitempty"`     // catatan admin (opsional)
+	Actor         string                 `protobuf:"bytes,4,opt,name=actor,proto3" json:"actor,omitempty"`   // id user admin (dari token)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateStatusRequest) Reset() {
+	*x = UpdateStatusRequest{}
+	mi := &file_saybu_order_v1_order_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateStatusRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateStatusRequest) ProtoMessage() {}
+
+func (x *UpdateStatusRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saybu_order_v1_order_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateStatusRequest.ProtoReflect.Descriptor instead.
+func (*UpdateStatusRequest) Descriptor() ([]byte, []int) {
+	return file_saybu_order_v1_order_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *UpdateStatusRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *UpdateStatusRequest) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *UpdateStatusRequest) GetNote() string {
+	if x != nil {
+		return x.Note
+	}
+	return ""
+}
+
+func (x *UpdateStatusRequest) GetActor() string {
+	if x != nil {
+		return x.Actor
+	}
+	return ""
+}
+
+type GetTodayStatsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetTodayStatsRequest) Reset() {
+	*x = GetTodayStatsRequest{}
+	mi := &file_saybu_order_v1_order_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetTodayStatsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetTodayStatsRequest) ProtoMessage() {}
+
+func (x *GetTodayStatsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saybu_order_v1_order_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetTodayStatsRequest.ProtoReflect.Descriptor instead.
+func (*GetTodayStatsRequest) Descriptor() ([]byte, []int) {
+	return file_saybu_order_v1_order_proto_rawDescGZIP(), []int{14}
+}
+
+type TodayStats struct {
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	OrdersCount          int64                  `protobuf:"varint,1,opt,name=orders_count,json=ordersCount,proto3" json:"orders_count,omitempty"`                            // pesanan dibuat hari ini (Asia/Jakarta)
+	RevenuePaid          int64                  `protobuf:"varint,2,opt,name=revenue_paid,json=revenuePaid,proto3" json:"revenue_paid,omitempty"`                            // total pesanan hari ini yang sudah lunas
+	AwaitingVerification int64                  `protobuf:"varint,3,opt,name=awaiting_verification,json=awaitingVerification,proto3" json:"awaiting_verification,omitempty"` // pesanan berstatus WAITING_VERIFICATION saat ini
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *TodayStats) Reset() {
+	*x = TodayStats{}
+	mi := &file_saybu_order_v1_order_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TodayStats) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TodayStats) ProtoMessage() {}
+
+func (x *TodayStats) ProtoReflect() protoreflect.Message {
+	mi := &file_saybu_order_v1_order_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TodayStats.ProtoReflect.Descriptor instead.
+func (*TodayStats) Descriptor() ([]byte, []int) {
+	return file_saybu_order_v1_order_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *TodayStats) GetOrdersCount() int64 {
+	if x != nil {
+		return x.OrdersCount
+	}
+	return 0
+}
+
+func (x *TodayStats) GetRevenuePaid() int64 {
+	if x != nil {
+		return x.RevenuePaid
+	}
+	return 0
+}
+
+func (x *TodayStats) GetAwaitingVerification() int64 {
+	if x != nil {
+		return x.AwaitingVerification
+	}
+	return 0
+}
+
 var File_saybu_order_v1_order_proto protoreflect.FileDescriptor
 
 const file_saybu_order_v1_order_proto_rawDesc = "" +
@@ -1009,12 +1301,37 @@ const file_saybu_order_v1_order_proto_rawDesc = "" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12\x14\n" +
 	"\x05phone\x18\x02 \x01(\tR\x05phone\x12\x17\n" +
 	"\auser_id\x18\x03 \x01(\tR\x06userId\x12\x16\n" +
-	"\x06reason\x18\x04 \x01(\tR\x06reason2\xcb\x02\n" +
+	"\x06reason\x18\x04 \x01(\tR\x06reason\"%\n" +
+	"\x13GetOrderByIDRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\x99\x01\n" +
+	"\x11ListOrdersRequest\x12\x16\n" +
+	"\x06status\x18\x01 \x01(\tR\x06status\x12\x1b\n" +
+	"\tdate_from\x18\x02 \x01(\tR\bdateFrom\x12\x17\n" +
+	"\adate_to\x18\x03 \x01(\tR\x06dateTo\x12\f\n" +
+	"\x01q\x18\x04 \x01(\tR\x01q\x12\x12\n" +
+	"\x04page\x18\x05 \x01(\x05R\x04page\x12\x14\n" +
+	"\x05limit\x18\x06 \x01(\x05R\x05limit\"g\n" +
+	"\x13UpdateStatusRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
+	"\x06status\x18\x02 \x01(\tR\x06status\x12\x12\n" +
+	"\x04note\x18\x03 \x01(\tR\x04note\x12\x14\n" +
+	"\x05actor\x18\x04 \x01(\tR\x05actor\"\x16\n" +
+	"\x14GetTodayStatsRequest\"\x87\x01\n" +
+	"\n" +
+	"TodayStats\x12!\n" +
+	"\forders_count\x18\x01 \x01(\x03R\vordersCount\x12!\n" +
+	"\frevenue_paid\x18\x02 \x01(\x03R\vrevenuePaid\x123\n" +
+	"\x15awaiting_verification\x18\x03 \x01(\x03R\x14awaitingVerification2\x8b\x05\n" +
 	"\fOrderService\x12H\n" +
 	"\vCreateOrder\x12\".saybu.order.v1.CreateOrderRequest\x1a\x15.saybu.order.v1.Order\x12N\n" +
 	"\x0eGetOrderByCode\x12%.saybu.order.v1.GetOrderByCodeRequest\x1a\x15.saybu.order.v1.Order\x12W\n" +
 	"\fListMyOrders\x12#.saybu.order.v1.ListMyOrdersRequest\x1a\".saybu.order.v1.ListOrdersResponse\x12H\n" +
-	"\vCancelOrder\x12\".saybu.order.v1.CancelOrderRequest\x1a\x15.saybu.order.v1.OrderB\"Z saybu/gen/saybu/order/v1;orderv1b\x06proto3"
+	"\vCancelOrder\x12\".saybu.order.v1.CancelOrderRequest\x1a\x15.saybu.order.v1.Order\x12J\n" +
+	"\fGetOrderByID\x12#.saybu.order.v1.GetOrderByIDRequest\x1a\x15.saybu.order.v1.Order\x12S\n" +
+	"\n" +
+	"ListOrders\x12!.saybu.order.v1.ListOrdersRequest\x1a\".saybu.order.v1.ListOrdersResponse\x12J\n" +
+	"\fUpdateStatus\x12#.saybu.order.v1.UpdateStatusRequest\x1a\x15.saybu.order.v1.Order\x12Q\n" +
+	"\rGetTodayStats\x12$.saybu.order.v1.GetTodayStatsRequest\x1a\x1a.saybu.order.v1.TodayStatsB\"Z saybu/gen/saybu/order/v1;orderv1b\x06proto3"
 
 var (
 	file_saybu_order_v1_order_proto_rawDescOnce sync.Once
@@ -1028,7 +1345,7 @@ func file_saybu_order_v1_order_proto_rawDescGZIP() []byte {
 	return file_saybu_order_v1_order_proto_rawDescData
 }
 
-var file_saybu_order_v1_order_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_saybu_order_v1_order_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_saybu_order_v1_order_proto_goTypes = []any{
 	(*Customer)(nil),              // 0: saybu.order.v1.Customer
 	(*Address)(nil),               // 1: saybu.order.v1.Address
@@ -1041,6 +1358,11 @@ var file_saybu_order_v1_order_proto_goTypes = []any{
 	(*ListMyOrdersRequest)(nil),   // 8: saybu.order.v1.ListMyOrdersRequest
 	(*ListOrdersResponse)(nil),    // 9: saybu.order.v1.ListOrdersResponse
 	(*CancelOrderRequest)(nil),    // 10: saybu.order.v1.CancelOrderRequest
+	(*GetOrderByIDRequest)(nil),   // 11: saybu.order.v1.GetOrderByIDRequest
+	(*ListOrdersRequest)(nil),     // 12: saybu.order.v1.ListOrdersRequest
+	(*UpdateStatusRequest)(nil),   // 13: saybu.order.v1.UpdateStatusRequest
+	(*GetTodayStatsRequest)(nil),  // 14: saybu.order.v1.GetTodayStatsRequest
+	(*TodayStats)(nil),            // 15: saybu.order.v1.TodayStats
 }
 var file_saybu_order_v1_order_proto_depIdxs = []int32{
 	0,  // 0: saybu.order.v1.CreateOrderRequest.customer:type_name -> saybu.order.v1.Customer
@@ -1055,12 +1377,20 @@ var file_saybu_order_v1_order_proto_depIdxs = []int32{
 	7,  // 9: saybu.order.v1.OrderService.GetOrderByCode:input_type -> saybu.order.v1.GetOrderByCodeRequest
 	8,  // 10: saybu.order.v1.OrderService.ListMyOrders:input_type -> saybu.order.v1.ListMyOrdersRequest
 	10, // 11: saybu.order.v1.OrderService.CancelOrder:input_type -> saybu.order.v1.CancelOrderRequest
-	6,  // 12: saybu.order.v1.OrderService.CreateOrder:output_type -> saybu.order.v1.Order
-	6,  // 13: saybu.order.v1.OrderService.GetOrderByCode:output_type -> saybu.order.v1.Order
-	9,  // 14: saybu.order.v1.OrderService.ListMyOrders:output_type -> saybu.order.v1.ListOrdersResponse
-	6,  // 15: saybu.order.v1.OrderService.CancelOrder:output_type -> saybu.order.v1.Order
-	12, // [12:16] is the sub-list for method output_type
-	8,  // [8:12] is the sub-list for method input_type
+	11, // 12: saybu.order.v1.OrderService.GetOrderByID:input_type -> saybu.order.v1.GetOrderByIDRequest
+	12, // 13: saybu.order.v1.OrderService.ListOrders:input_type -> saybu.order.v1.ListOrdersRequest
+	13, // 14: saybu.order.v1.OrderService.UpdateStatus:input_type -> saybu.order.v1.UpdateStatusRequest
+	14, // 15: saybu.order.v1.OrderService.GetTodayStats:input_type -> saybu.order.v1.GetTodayStatsRequest
+	6,  // 16: saybu.order.v1.OrderService.CreateOrder:output_type -> saybu.order.v1.Order
+	6,  // 17: saybu.order.v1.OrderService.GetOrderByCode:output_type -> saybu.order.v1.Order
+	9,  // 18: saybu.order.v1.OrderService.ListMyOrders:output_type -> saybu.order.v1.ListOrdersResponse
+	6,  // 19: saybu.order.v1.OrderService.CancelOrder:output_type -> saybu.order.v1.Order
+	6,  // 20: saybu.order.v1.OrderService.GetOrderByID:output_type -> saybu.order.v1.Order
+	9,  // 21: saybu.order.v1.OrderService.ListOrders:output_type -> saybu.order.v1.ListOrdersResponse
+	6,  // 22: saybu.order.v1.OrderService.UpdateStatus:output_type -> saybu.order.v1.Order
+	15, // 23: saybu.order.v1.OrderService.GetTodayStats:output_type -> saybu.order.v1.TodayStats
+	16, // [16:24] is the sub-list for method output_type
+	8,  // [8:16] is the sub-list for method input_type
 	8,  // [8:8] is the sub-list for extension type_name
 	8,  // [8:8] is the sub-list for extension extendee
 	0,  // [0:8] is the sub-list for field type_name
@@ -1077,7 +1407,7 @@ func file_saybu_order_v1_order_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_saybu_order_v1_order_proto_rawDesc), len(file_saybu_order_v1_order_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

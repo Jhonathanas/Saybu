@@ -98,6 +98,8 @@ func (n *Notifier) buildMessage(ev kafkax.Event) (string, bool) {
 		return paymentConfirmedMessage(ev.Payload)
 	case "payment.rejected":
 		return paymentRejectedMessage(ev.Payload)
+	case "stock.low":
+		return stockLowMessage(ev.Payload)
 	default:
 		return "", false
 	}
@@ -202,6 +204,49 @@ func paymentRejectedMessage(raw json.RawMessage) (string, bool) {
 		msg += "\nAlasan: " + p.Reason
 	}
 	return msg, true
+}
+
+func stockLowMessage(raw json.RawMessage) (string, bool) {
+	var p struct {
+		Name      string `json:"name"`
+		Remaining int64  `json:"remaining"`
+		Unit      string `json:"unit"`
+		Threshold int64  `json:"threshold"`
+	}
+	if err := json.Unmarshal(raw, &p); err != nil {
+		return "", false
+	}
+	if strings.TrimSpace(p.Name) == "" {
+		return "", false
+	}
+	return fmt.Sprintf("📉 Stok menipis: %s\nTersisa %s (ambang %s)",
+		p.Name, qtyDisplay(p.Unit, p.Remaining), qtyDisplay(p.Unit, p.Threshold)), true
+}
+
+// qtyDisplay memformat qty (satuan terkecil) sesuai satuannya.
+func qtyDisplay(unit string, qty int64) string {
+	if unit == "kg" {
+		return formatKg(qty) + " kg"
+	}
+	if unit == "" {
+		return strconv.FormatInt(qty, 10)
+	}
+	return strconv.FormatInt(qty, 10) + " " + unit
+}
+
+// formatKg memformat gram menjadi "1,5" (tanpa satuan).
+func formatKg(grams int64) string {
+	whole := grams / 1000
+	rem := grams % 1000
+	if rem == 0 {
+		return strconv.FormatInt(whole, 10)
+	}
+	frac := strconv.FormatInt(rem, 10)
+	for len(frac) < 3 {
+		frac = "0" + frac
+	}
+	frac = strings.TrimRight(frac, "0")
+	return strconv.FormatInt(whole, 10) + "," + frac
 }
 
 // rupiah memformat nominal sebagai "Rp1.234.567".

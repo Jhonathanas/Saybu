@@ -314,6 +314,38 @@ func (r *Repo) CancelFromOrderEvent(ctx context.Context, eventID, eventType, ord
 	return true, nil
 }
 
+// MarkCODPaidFromOrderEvent menandai pembayaran COD lunas saat pesanan selesai,
+// idempotent terhadap event_id. Mengembalikan processed=false bila sudah diproses.
+func (r *Repo) MarkCODPaidFromOrderEvent(ctx context.Context, eventID, eventType, orderID string) (bool, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return false, fmt.Errorf("repo: begin cod paid: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	tag, err := tx.Exec(ctx, `
+		INSERT INTO processed_events (event_id, event_type) VALUES ($1, $2)
+		ON CONFLICT (event_id) DO NOTHING
+	`, eventID, eventType)
+	if err != nil {
+		return false, fmt.Errorf("repo: insert processed event: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return false, nil
+	}
+
+	if _, err := tx.Exec(ctx, `
+		UPDATE payments SET status = 'COD_PAID', updated_at = now()
+		WHERE order_id = $1 AND method = 'COD' AND status = 'COD_PENDING'
+	`, orderID); err != nil {
+		return false, fmt.Errorf("repo: mark cod paid: %w", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return false, fmt.Errorf("repo: commit cod paid: %w", err)
+	}
+	return true, nil
+}
+
 func (r *Repo) getByOrderID(ctx context.Context, q queryer, orderID string) (domain.Payment, error) {
 	p, err := scanPayment(q.QueryRow(ctx,
 		`SELECT `+paymentColumns+` FROM payments p WHERE p.order_id = $1`, orderID))

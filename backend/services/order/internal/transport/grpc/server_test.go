@@ -24,9 +24,14 @@ type stubService struct {
 	get      func(context.Context, string, string, string) (domain.Order, error)
 	list     func(context.Context, string, int, int) ([]domain.Order, int64, int, int, error)
 	cancel   func(context.Context, string, string, string, string) (domain.Order, error)
+	getByID  func(context.Context, string) (domain.Order, error)
+	listAll  func(context.Context, domain.ListOrdersFilter) ([]domain.Order, int64, int, int, error)
+	update   func(context.Context, string, string, string, string) (domain.Order, error)
+	stats    func(context.Context) (domain.TodayStats, error)
 	lastIn   domain.CreateInput
 	lastKey  string
 	lastArgs []string
+	lastFilt domain.ListOrdersFilter
 }
 
 func (s *stubService) CreateOrder(ctx context.Context, in domain.CreateInput, key string) (domain.Order, error) {
@@ -46,6 +51,24 @@ func (s *stubService) ListMyOrders(ctx context.Context, userID string, page, lim
 func (s *stubService) CancelOrder(ctx context.Context, code, phone, userID, reason string) (domain.Order, error) {
 	s.lastArgs = []string{code, phone, userID, reason}
 	return s.cancel(ctx, code, phone, userID, reason)
+}
+
+func (s *stubService) GetOrderByID(ctx context.Context, id string) (domain.Order, error) {
+	return s.getByID(ctx, id)
+}
+
+func (s *stubService) ListOrders(ctx context.Context, f domain.ListOrdersFilter) ([]domain.Order, int64, int, int, error) {
+	s.lastFilt = f
+	return s.listAll(ctx, f)
+}
+
+func (s *stubService) UpdateStatus(ctx context.Context, id, to, note, actor string) (domain.Order, error) {
+	s.lastArgs = []string{id, to, note, actor}
+	return s.update(ctx, id, to, note, actor)
+}
+
+func (s *stubService) GetTodayStats(ctx context.Context) (domain.TodayStats, error) {
+	return s.stats(ctx)
 }
 
 func startServer(t *testing.T, svc Service) orderv1.OrderServiceClient {
@@ -269,5 +292,69 @@ func TestListMyOrders(t *testing.T) {
 	}
 	if resp.GetTotal() != 1 || len(resp.GetOrders()) != 1 || resp.GetPage() != 2 {
 		t.Fatalf("resp = %+v", resp)
+	}
+}
+
+func TestUpdateStatusMapsArgsAndIllegalTransition(t *testing.T) {
+	stub := &stubService{update: func(_ context.Context, id, to, note, actor string) (domain.Order, error) {
+		if id != "o-1" || to != "PREPARING" || note != "disiapkan" || actor != "u-admin" {
+			t.Fatalf("args = %s %s %s %s", id, to, note, actor)
+		}
+		return domain.Order{}, domain.ErrInvalidTransition
+	}}
+	client := startServer(t, stub)
+
+	_, err := client.UpdateStatus(context.Background(), &orderv1.UpdateStatusRequest{
+		Id: "o-1", Status: "PREPARING", Note: "disiapkan", Actor: "u-admin",
+	})
+	if st, _ := status.FromError(err); st.Code() != codes.Aborted {
+		t.Fatalf("code = %v, want Aborted", st.Code())
+	}
+}
+
+func TestListOrdersMapsFilter(t *testing.T) {
+	stub := &stubService{listAll: func(_ context.Context, f domain.ListOrdersFilter) ([]domain.Order, int64, int, int, error) {
+		if f.Status != "PAID" || f.DateFrom != "2026-11-01" || f.DateTo != "2026-11-30" || f.Query != "SB-" || f.Page != 2 || f.Limit != 10 {
+			t.Fatalf("filter = %+v", f)
+		}
+		return []domain.Order{sampleOrder()}, 1, f.Page, f.Limit, nil
+	}}
+	client := startServer(t, stub)
+
+	resp, err := client.ListOrders(context.Background(), &orderv1.ListOrdersRequest{
+		Status: "PAID", DateFrom: "2026-11-01", DateTo: "2026-11-30", Q: "SB-", Page: 2, Limit: 10,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.GetTotal() != 1 || len(resp.GetOrders()) != 1 || resp.GetPage() != 2 {
+		t.Fatalf("resp = %+v", resp)
+	}
+}
+
+func TestGetTodayStatsMapsFields(t *testing.T) {
+	stub := &stubService{stats: func(context.Context) (domain.TodayStats, error) {
+		return domain.TodayStats{OrdersCount: 12, RevenuePaid: 845000, AwaitingVerification: 3}, nil
+	}}
+	client := startServer(t, stub)
+
+	resp, err := client.GetTodayStats(context.Background(), &orderv1.GetTodayStatsRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.GetOrdersCount() != 12 || resp.GetRevenuePaid() != 845000 || resp.GetAwaitingVerification() != 3 {
+		t.Fatalf("resp = %+v", resp)
+	}
+}
+
+func TestGetOrderByIDNotFound(t *testing.T) {
+	stub := &stubService{getByID: func(context.Context, string) (domain.Order, error) {
+		return domain.Order{}, domain.ErrOrderNotFound
+	}}
+	client := startServer(t, stub)
+
+	_, err := client.GetOrderByID(context.Background(), &orderv1.GetOrderByIDRequest{Id: "x"})
+	if st, _ := status.FromError(err); st.Code() != codes.NotFound {
+		t.Fatalf("code = %v", st.Code())
 	}
 }

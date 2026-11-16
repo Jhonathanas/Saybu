@@ -25,6 +25,7 @@ type Repo interface {
 	ListCategories(ctx context.Context, includeInactive bool) ([]domain.Category, error)
 	GetCategory(ctx context.Context, id string) (domain.Category, error)
 	ListProducts(ctx context.Context, f domain.ProductFilter) ([]domain.Product, int64, error)
+	ListLowStock(ctx context.Context, limit int) ([]domain.Product, error)
 	GetProductByID(ctx context.Context, id string, includeInactive bool) (domain.Product, error)
 	GetProductBySlug(ctx context.Context, slug string, includeInactive bool) (domain.Product, error)
 	CreateProduct(ctx context.Context, p domain.Product, events []outbox.Record) (domain.Product, error)
@@ -32,7 +33,7 @@ type Repo interface {
 	SetStock(ctx context.Context, id string, newStock int64, events []outbox.Record) (domain.Product, error)
 	SetActive(ctx context.Context, id string, active bool, events []outbox.Record) (domain.Product, error)
 	CheckStock(ctx context.Context, items []domain.StockItem) ([]domain.StockStatus, error)
-	ReserveStock(ctx context.Context, orderID string, items []domain.StockItem) ([]domain.StockStatus, error)
+	ReserveStock(ctx context.Context, orderID string, items []domain.StockItem, events func([]domain.Product) ([]outbox.Record, error)) ([]domain.StockStatus, error)
 	ReleaseStock(ctx context.Context, orderID string) error
 	ReleaseStockOnce(ctx context.Context, eventID, orderID string) (bool, error)
 	ConfirmStockOnce(ctx context.Context, eventID, orderID string) (bool, error)
@@ -112,6 +113,11 @@ func (s *Service) ListProducts(ctx context.Context, in ListProductsInput) ([]dom
 		return nil, 0, 0, 0, err
 	}
 	return products, total, page, limit, nil
+}
+
+// ListLowStock mengambil produk aktif yang stoknya menipis.
+func (s *Service) ListLowStock(ctx context.Context, limit int) ([]domain.Product, error) {
+	return s.repo.ListLowStock(ctx, limit)
 }
 
 // GetProduct mengambil produk berdasarkan id atau slug.
@@ -316,6 +322,9 @@ func (s *Service) CheckStock(ctx context.Context, items []domain.StockItem) ([]d
 }
 
 // ReserveStock mengurangi stok untuk sebuah order.
+//
+// Bila reservasi membuat stok melewati ambang menipis, event stock.low ditulis
+// ke outbox dalam transaksi yang sama (sekali per pelanggaran ambang).
 func (s *Service) ReserveStock(ctx context.Context, orderID string, items []domain.StockItem) ([]domain.StockStatus, error) {
 	if strings.TrimSpace(orderID) == "" {
 		return nil, (&domain.ValidationError{}).Add("order_id", "ID order wajib diisi.")
@@ -323,7 +332,7 @@ func (s *Service) ReserveStock(ctx context.Context, orderID string, items []doma
 	if len(items) == 0 {
 		return nil, (&domain.ValidationError{}).Add("items", "Daftar item tidak boleh kosong.")
 	}
-	return s.repo.ReserveStock(ctx, orderID, items)
+	return s.repo.ReserveStock(ctx, orderID, items, s.stockLowEvents)
 }
 
 // ReleaseStock mengembalikan stok reservasi order.
@@ -437,6 +446,19 @@ func (s *Service) stockLowEvent(p domain.Product, remaining int64) (outbox.Recor
 		"threshold":  p.LowStockThreshold,
 	}
 	return newRecord("stock.low", p.ID, payload)
+}
+
+// stockLowEvents membangun record stock.low untuk beberapa produk sekaligus.
+func (s *Service) stockLowEvents(products []domain.Product) ([]outbox.Record, error) {
+	recs := make([]outbox.Record, 0, len(products))
+	for _, p := range products {
+		rec, err := s.stockLowEvent(p, p.Stock)
+		if err != nil {
+			return nil, err
+		}
+		recs = append(recs, rec)
+	}
+	return recs, nil
 }
 
 func newRecord(eventType, key string, payload any) (outbox.Record, error) {

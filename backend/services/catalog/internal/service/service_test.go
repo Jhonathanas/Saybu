@@ -18,6 +18,8 @@ type fakeRepo struct {
 	created     []domain.Product
 	releaseOnce []string
 	confirmOnce []string
+	crossed     []domain.Product
+	lastLimit   int
 }
 
 func newFake() *fakeRepo {
@@ -44,6 +46,16 @@ func (f *fakeRepo) ListProducts(_ context.Context, in domain.ProductFilter) ([]d
 		out = append(out, p)
 	}
 	return out, int64(len(out)), nil
+}
+func (f *fakeRepo) ListLowStock(_ context.Context, limit int) ([]domain.Product, error) {
+	f.lastLimit = limit
+	var out []domain.Product
+	for _, p := range f.products {
+		if p.IsActive && p.Stock <= p.LowStockThreshold {
+			out = append(out, p)
+		}
+	}
+	return out, nil
 }
 func (f *fakeRepo) GetProductByID(_ context.Context, id string, _ bool) (domain.Product, error) {
 	p, ok := f.products[id]
@@ -88,7 +100,14 @@ func (f *fakeRepo) SetActive(_ context.Context, id string, active bool, ev []out
 func (f *fakeRepo) CheckStock(context.Context, []domain.StockItem) ([]domain.StockStatus, error) {
 	return nil, nil
 }
-func (f *fakeRepo) ReserveStock(context.Context, string, []domain.StockItem) ([]domain.StockStatus, error) {
+func (f *fakeRepo) ReserveStock(_ context.Context, _ string, _ []domain.StockItem, events func([]domain.Product) ([]outbox.Record, error)) ([]domain.StockStatus, error) {
+	if events != nil && len(f.crossed) > 0 {
+		recs, err := events(f.crossed)
+		if err != nil {
+			return nil, err
+		}
+		f.lastEv = recs
+	}
 	return nil, nil
 }
 func (f *fakeRepo) ReleaseStock(context.Context, string) error { return nil }
@@ -247,4 +266,39 @@ func TestListProductsNormalizesPaging(t *testing.T) {
 func withThreshold(p domain.Product, t int64) domain.Product {
 	p.LowStockThreshold = t
 	return p
+}
+
+func TestReserveStockEmitsLowEventOnCrossing(t *testing.T) {
+	s, r := newService(t)
+	created, _ := s.CreateProduct(context.Background(), CreateProductInput{
+		Name: "Tomat", Unit: domain.UnitKg, Price: 10000, Stock: 4000, IsActive: true,
+	})
+	r.products[created.ID] = withThreshold(r.products[created.ID], 5000)
+	r.crossed = []domain.Product{{ID: created.ID, Name: "Tomat", Unit: domain.UnitKg, Stock: 3000, LowStockThreshold: 5000}}
+
+	if _, err := s.ReserveStock(context.Background(), "o-1", []domain.StockItem{{ProductID: created.ID, Qty: 1000}}); err != nil {
+		t.Fatal(err)
+	}
+	if len(r.lastEv) != 1 || r.lastEv[0].Headers["event-type"] != "stock.low" {
+		t.Fatalf("event = %+v", r.lastEv)
+	}
+}
+
+func TestListLowStockDelegates(t *testing.T) {
+	s, r := newService(t)
+	created, _ := s.CreateProduct(context.Background(), CreateProductInput{
+		Name: "Tomat", Unit: domain.UnitKg, Price: 10000, Stock: 3000, IsActive: true,
+	})
+	r.products[created.ID] = withThreshold(r.products[created.ID], 5000)
+
+	out, err := s.ListLowStock(context.Background(), 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(out) != 1 || out[0].ID != created.ID {
+		t.Fatalf("out = %+v", out)
+	}
+	if r.lastLimit != 5 {
+		t.Fatalf("limit = %d", r.lastLimit)
+	}
 }

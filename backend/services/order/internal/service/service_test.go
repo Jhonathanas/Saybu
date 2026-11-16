@@ -34,6 +34,7 @@ type fakeRepo struct {
 	lastFrom, lastTo string
 	idemCalls        int
 	missFirstLookup  bool
+	stats            domain.TodayStats
 }
 
 func newFakeRepo() *fakeRepo {
@@ -77,6 +78,21 @@ func (f *fakeRepo) ListOrdersByUser(_ context.Context, userID string, _, _ int) 
 		}
 	}
 	return out, int64(len(out)), nil
+}
+
+func (f *fakeRepo) ListOrders(_ context.Context, flt domain.ListOrdersFilter) ([]domain.Order, int64, error) {
+	var out []domain.Order
+	for _, o := range f.orders {
+		if flt.Status != "" && o.Status != flt.Status {
+			continue
+		}
+		out = append(out, o)
+	}
+	return out, int64(len(out)), nil
+}
+
+func (f *fakeRepo) TodayStats(_ context.Context) (domain.TodayStats, error) {
+	return f.stats, nil
 }
 
 func (f *fakeRepo) CreateOrder(_ context.Context, o domain.Order, idem repo.Idempotency, events func(domain.Order) ([]outbox.Record, error)) (domain.Order, error) {
@@ -620,5 +636,102 @@ func TestHandlePaymentEventIgnoresUnknownAndBadPayload(t *testing.T) {
 	missing := paymentEvent("payment.confirmed", map[string]any{})
 	if err := svc.HandlePaymentEvent(context.Background(), missing); err == nil {
 		t.Fatal("order_id kosong harus error")
+	}
+}
+
+func TestUpdateStatusValidTransition(t *testing.T) {
+	svc, r, _, _ := newTestService(t)
+	r.orders["o-1"] = domain.Order{ID: "o-1", Code: "SB-1", Status: domain.StatusPaid}
+
+	o, err := svc.UpdateStatus(context.Background(), "o-1", domain.StatusPreparing, "disiapkan", "u-admin")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if o.Status != domain.StatusPreparing {
+		t.Fatalf("status = %s", o.Status)
+	}
+	if len(r.transitionEvents) != 1 {
+		t.Fatalf("event = %+v", r.transitionEvents)
+	}
+	if r.transitionEvents[0].Headers["event-type"] != "order.status_changed" {
+		t.Fatalf("tipe event = %v", r.transitionEvents[0].Headers)
+	}
+}
+
+func TestUpdateStatusRejectsIllegalTransition(t *testing.T) {
+	svc, r, _, _ := newTestService(t)
+	r.orders["o-1"] = domain.Order{ID: "o-1", Code: "SB-1", Status: domain.StatusCompleted}
+
+	if _, err := svc.UpdateStatus(context.Background(), "o-1", domain.StatusPreparing, "", "u-admin"); !errors.Is(err, domain.ErrInvalidTransition) {
+		t.Fatalf("err = %v, want ErrInvalidTransition", err)
+	}
+	if len(r.transitionEvents) != 0 {
+		t.Fatalf("tidak boleh ada event: %+v", r.transitionEvents)
+	}
+}
+
+func TestUpdateStatusUnknownStatus(t *testing.T) {
+	svc, r, _, _ := newTestService(t)
+	r.orders["o-1"] = domain.Order{ID: "o-1", Code: "SB-1", Status: domain.StatusPaid}
+
+	_, err := svc.UpdateStatus(context.Background(), "o-1", "NOPE", "", "u-admin")
+	var ve *domain.ValidationError
+	if !errors.As(err, &ve) {
+		t.Fatalf("err = %v, want ValidationError", err)
+	}
+}
+
+func TestUpdateStatusOrderNotFound(t *testing.T) {
+	svc, _, _, _ := newTestService(t)
+	if _, err := svc.UpdateStatus(context.Background(), "missing", domain.StatusPaid, "", "u-admin"); !errors.Is(err, domain.ErrOrderNotFound) {
+		t.Fatalf("err = %v, want ErrOrderNotFound", err)
+	}
+}
+
+func TestListOrdersNormalizesAndFilters(t *testing.T) {
+	svc, r, _, _ := newTestService(t)
+	r.orders["o-1"] = domain.Order{ID: "o-1", Status: domain.StatusPaid}
+	r.orders["o-2"] = domain.Order{ID: "o-2", Status: domain.StatusPreparing}
+
+	orders, total, page, limit, err := svc.ListOrders(context.Background(), domain.ListOrdersFilter{Status: domain.StatusPaid})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if total != 1 || len(orders) != 1 || orders[0].ID != "o-1" {
+		t.Fatalf("orders = %+v total=%d", orders, total)
+	}
+	if page != 1 || limit != 20 {
+		t.Fatalf("page=%d limit=%d, want 1/20", page, limit)
+	}
+}
+
+func TestListOrdersRejectsBadDate(t *testing.T) {
+	svc, _, _, _ := newTestService(t)
+	_, _, _, _, err := svc.ListOrders(context.Background(), domain.ListOrdersFilter{DateFrom: "14-11-2026"})
+	var ve *domain.ValidationError
+	if !errors.As(err, &ve) {
+		t.Fatalf("err = %v, want ValidationError", err)
+	}
+}
+
+func TestGetOrderByIDRequiresID(t *testing.T) {
+	svc, _, _, _ := newTestService(t)
+	_, err := svc.GetOrderByID(context.Background(), "  ")
+	var ve *domain.ValidationError
+	if !errors.As(err, &ve) {
+		t.Fatalf("err = %v, want ValidationError", err)
+	}
+}
+
+func TestGetTodayStats(t *testing.T) {
+	svc, r, _, _ := newTestService(t)
+	r.stats = domain.TodayStats{OrdersCount: 12, RevenuePaid: 845000, AwaitingVerification: 3}
+
+	st, err := svc.GetTodayStats(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.OrdersCount != 12 || st.RevenuePaid != 845000 || st.AwaitingVerification != 3 {
+		t.Fatalf("stats = %+v", st)
 	}
 }

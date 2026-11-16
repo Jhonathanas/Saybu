@@ -14,6 +14,9 @@ service CatalogService {
   rpc ListCategories(ListCategoriesRequest) returns (ListCategoriesResponse);
 
   rpc ListProducts(ListProductsRequest) returns (ListProductsResponse);
+  // ListLowStock mengembalikan produk aktif yang stoknya <= ambang menipis.
+  // Dipakai gateway untuk kartu "stok menipis" di dashboard admin (M5).
+  rpc ListLowStock(ListLowStockRequest) returns (ListLowStockResponse);
   rpc GetProduct(GetProductRequest) returns (Product);
   rpc CreateProduct(CreateProductRequest) returns (Product);
   rpc UpdateProduct(UpdateProductRequest) returns (Product);
@@ -74,6 +77,21 @@ message ListProductsResponse {
   int32 page = 2;
   int32 limit = 3;
   int64 total = 4;
+}
+
+message ListLowStockRequest {
+  int32 limit = 1;
+}
+
+message LowStockProduct {
+  string product_id = 1;
+  string name = 2;
+  int64 stock = 3; // satuan terkecil (gram untuk kg)
+  string unit = 4;
+}
+
+message ListLowStockResponse {
+  repeated LowStockProduct products = 1;
 }
 
 message GetProductRequest {

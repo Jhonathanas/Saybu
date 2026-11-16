@@ -40,6 +40,9 @@ func (s *stubService) ListCategories(context.Context, bool) ([]domain.Category, 
 func (s *stubService) ListProducts(context.Context, service.ListProductsInput) ([]domain.Product, int64, int, int, error) {
 	return s.products, s.total, 1, 20, s.listErr
 }
+func (s *stubService) ListLowStock(context.Context, int) ([]domain.Product, error) {
+	return s.products, s.listErr
+}
 func (s *stubService) GetProduct(context.Context, string, string, bool) (domain.Product, error) {
 	return s.product, s.prodErr
 }
@@ -182,5 +185,24 @@ func TestCheckStockAllOk(t *testing.T) {
 	}
 	if !resp.GetAllOk() || len(resp.GetItems()) != 1 {
 		t.Fatalf("resp = %+v", resp)
+	}
+}
+
+func TestListLowStockMapsProducts(t *testing.T) {
+	stub := &stubService{products: []domain.Product{
+		{ID: "p1", Name: "Tomat", Unit: domain.UnitKg, Stock: 3000, LowStockThreshold: 5000, IsActive: true},
+	}}
+	client := startServer(t, stub)
+
+	resp, err := client.ListLowStock(context.Background(), &catalogv1.ListLowStockRequest{Limit: 5})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(resp.GetProducts()) != 1 {
+		t.Fatalf("resp = %+v", resp)
+	}
+	got := resp.GetProducts()[0]
+	if got.GetProductId() != "p1" || got.GetName() != "Tomat" || got.GetStock() != 3000 || got.GetUnit() != "kg" {
+		t.Fatalf("produk = %+v", got)
 	}
 }

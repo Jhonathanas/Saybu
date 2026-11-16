@@ -404,9 +404,46 @@ func (r *Repo) CheckStock(ctx context.Context, items []domain.StockItem) ([]doma
 	return out, nil
 }
 
+// ListLowStock mengambil produk aktif yang stoknya berada pada atau di bawah
+// ambang stok menipis, diurutkan dari yang paling sedikit.
+func (r *Repo) ListLowStock(ctx context.Context, limit int) ([]domain.Product, error) {
+	if limit < 1 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	rows, err := r.pool.Query(ctx, `
+		SELECT `+productColumns+`
+		FROM products p
+		LEFT JOIN categories c ON c.id = p.category_id
+		WHERE p.is_active AND p.stock <= p.low_stock_threshold
+		ORDER BY p.stock ASC, p.name ASC
+		LIMIT $1
+	`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("repo: list low stock: %w", err)
+	}
+	defer rows.Close()
+
+	var out []domain.Product
+	for rows.Next() {
+		p, err := scanProduct(rows)
+		if err != nil {
+			return nil, fmt.Errorf("repo: scan low stock product: %w", err)
+		}
+		out = append(out, p)
+	}
+	return out, rows.Err()
+}
+
 // ReserveStock mengurangi stok dan mencatat reservasi untuk sebuah order.
 // Bila ada item yang kurang, seluruh transaksi dibatalkan dan item yang gagal dikembalikan.
-func (r *Repo) ReserveStock(ctx context.Context, orderID string, items []domain.StockItem) ([]domain.StockStatus, error) {
+//
+// Callback `events` dipanggil dengan produk yang baru saja melewati ambang stok
+// menipis (dari di atas ke di bawah/sama dengan ambang); record yang dikembalikan
+// ditulis ke outbox dalam transaksi yang sama.
+func (r *Repo) ReserveStock(ctx context.Context, orderID string, items []domain.StockItem, events func([]domain.Product) ([]outbox.Record, error)) ([]domain.StockStatus, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("repo: begin reserve: %w", err)
@@ -414,12 +451,13 @@ func (r *Repo) ReserveStock(ctx context.Context, orderID string, items []domain.
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	var insufficient []domain.StockStatus
+	var crossed []domain.Product
 	for _, it := range items {
-		var name string
-		var stock int64
+		var name, unit string
+		var stock, threshold int64
 		err := tx.QueryRow(ctx,
-			`SELECT name, stock FROM products WHERE id = $1 AND is_active FOR UPDATE`,
-			it.ProductID).Scan(&name, &stock)
+			`SELECT name, unit, stock, low_stock_threshold FROM products WHERE id = $1 AND is_active FOR UPDATE`,
+			it.ProductID).Scan(&name, &unit, &stock, &threshold)
 		if errors.Is(err, pgx.ErrNoRows) {
 			insufficient = append(insufficient, domain.StockStatus{ProductID: it.ProductID, Requested: it.Qty})
 			continue
@@ -444,11 +482,29 @@ func (r *Repo) ReserveStock(ctx context.Context, orderID string, items []domain.
 		`, orderID, it.ProductID, it.Qty); err != nil {
 			return nil, fmt.Errorf("repo: insert reservation: %w", err)
 		}
+		remaining := stock - it.Qty
+		if stock > threshold && remaining <= threshold {
+			crossed = append(crossed, domain.Product{
+				ID: it.ProductID, Name: name, Unit: unit,
+				Stock: remaining, LowStockThreshold: threshold,
+			})
+		}
 	}
 
 	if len(insufficient) > 0 {
 		return insufficient, nil // rollback via defer
 	}
+
+	if events != nil && len(crossed) > 0 {
+		recs, err := events(crossed)
+		if err != nil {
+			return nil, err
+		}
+		if err := insertEvents(ctx, r.outbox, tx, recs); err != nil {
+			return nil, err
+		}
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("repo: commit reserve: %w", err)
 	}

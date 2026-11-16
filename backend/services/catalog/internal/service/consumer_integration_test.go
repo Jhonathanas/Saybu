@@ -63,7 +63,7 @@ func TestOrderEventConsumerIntegration(t *testing.T) {
 	})
 
 	orderID := ids.New()
-	if _, err := r.ReserveStock(ctx, orderID, []domain.StockItem{{ProductID: product.ID, Qty: 200}}); err != nil {
+	if _, err := r.ReserveStock(ctx, orderID, []domain.StockItem{{ProductID: product.ID, Qty: 200}}, nil); err != nil {
 		t.Fatal(err)
 	}
 	if stock(t, ctx, pool, product.ID) != 800 {

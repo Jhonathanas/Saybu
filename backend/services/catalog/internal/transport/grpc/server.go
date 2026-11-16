@@ -22,6 +22,7 @@ import (
 type Service interface {
 	ListCategories(ctx context.Context, includeInactive bool) ([]domain.Category, error)
 	ListProducts(ctx context.Context, in service.ListProductsInput) ([]domain.Product, int64, int, int, error)
+	ListLowStock(ctx context.Context, limit int) ([]domain.Product, error)
 	GetProduct(ctx context.Context, id, slug string, includeInactive bool) (domain.Product, error)
 	CreateProduct(ctx context.Context, in service.CreateProductInput) (domain.Product, error)
 	UpdateProduct(ctx context.Context, in service.UpdateProductInput) (domain.Product, error)
@@ -81,6 +82,24 @@ func (s *Server) ListProducts(ctx context.Context, req *catalogv1.ListProductsRe
 	out := &catalogv1.ListProductsResponse{Page: int32(page), Limit: int32(limit), Total: total}
 	for _, p := range products {
 		out.Products = append(out.Products, toProtoProduct(p))
+	}
+	return out, nil
+}
+
+// ListLowStock mengembalikan produk aktif yang stoknya menipis.
+func (s *Server) ListLowStock(ctx context.Context, req *catalogv1.ListLowStockRequest) (*catalogv1.ListLowStockResponse, error) {
+	products, err := s.svc.ListLowStock(ctx, int(req.GetLimit()))
+	if err != nil {
+		return nil, s.toStatus(err)
+	}
+	out := &catalogv1.ListLowStockResponse{}
+	for _, p := range products {
+		out.Products = append(out.Products, &catalogv1.LowStockProduct{
+			ProductId: p.ID,
+			Name:      p.Name,
+			Stock:     p.Stock,
+			Unit:      p.Unit,
+		})
 	}
 	return out, nil
 }

@@ -22,6 +22,7 @@ type fakeRepo struct {
 	attachEvents []outbox.Record
 	verifyEvents []outbox.Record
 	cancelled    []string
+	codPaid      []string
 	created      []repo.CreateInput
 }
 
@@ -134,6 +135,18 @@ func (f *fakeRepo) Verify(_ context.Context, paymentID, toStatus, note, verified
 
 func (f *fakeRepo) CancelFromOrderEvent(_ context.Context, _, _, orderID string) (bool, error) {
 	f.cancelled = append(f.cancelled, orderID)
+	return true, nil
+}
+
+func (f *fakeRepo) MarkCODPaidFromOrderEvent(_ context.Context, _, _, orderID string) (bool, error) {
+	f.codPaid = append(f.codPaid, orderID)
+	if id, ok := f.byOrder[orderID]; ok {
+		p := f.byID[id]
+		if p.Method == domain.MethodCOD && p.Status == domain.StatusCODPending {
+			p.Status = domain.StatusCODPaid
+			f.byID[id] = p
+		}
+	}
 	return true, nil
 }
 
@@ -315,8 +328,58 @@ func TestHandleOrderEventErrors(t *testing.T) {
 		t.Fatal("metode tak dikenal harus error")
 	}
 
-	unknown := kafkax.Event{EventID: "e", Type: "order.status_changed", Payload: json.RawMessage(`{}`)}
+	unknown := kafkax.Event{EventID: "e", Type: "order.something_else", Payload: json.RawMessage(`{}`)}
 	if err := s.HandleOrderEvent(context.Background(), unknown); err != nil {
 		t.Fatalf("tipe lain harus diabaikan: %v", err)
+	}
+}
+
+func TestHandleOrderStatusChangedMarksCODPaid(t *testing.T) {
+	s, r := newService(t)
+	r.add(domain.Payment{
+		ID: "pay-1", OrderID: "o-1", OrderCode: "SB-1", Method: domain.MethodCOD,
+		Status: domain.StatusCODPending, Amount: 85000,
+	})
+
+	payload, _ := json.Marshal(map[string]any{"order_id": "o-1", "code": "SB-1", "from": "READY_PICKUP", "to": "COMPLETED"})
+	ev := kafkax.Event{EventID: "ev-1", Type: "order.status_changed", Payload: payload}
+
+	if err := s.HandleOrderEvent(context.Background(), ev); err != nil {
+		t.Fatal(err)
+	}
+	if len(r.codPaid) != 1 || r.codPaid[0] != "o-1" {
+		t.Fatalf("codPaid = %+v", r.codPaid)
+	}
+	if got := r.byID["pay-1"].Status; got != domain.StatusCODPaid {
+		t.Fatalf("status = %s, want COD_PAID", got)
+	}
+}
+
+func TestHandleOrderStatusChangedIgnoresNonCompleted(t *testing.T) {
+	s, r := newService(t)
+	r.add(domain.Payment{
+		ID: "pay-1", OrderID: "o-1", OrderCode: "SB-1", Method: domain.MethodCOD,
+		Status: domain.StatusCODPending, Amount: 85000,
+	})
+
+	payload, _ := json.Marshal(map[string]any{"order_id": "o-1", "from": "PAID", "to": "PREPARING"})
+	ev := kafkax.Event{EventID: "ev-1", Type: "order.status_changed", Payload: payload}
+
+	if err := s.HandleOrderEvent(context.Background(), ev); err != nil {
+		t.Fatal(err)
+	}
+	if len(r.codPaid) != 0 {
+		t.Fatalf("codPaid harus kosong: %+v", r.codPaid)
+	}
+	if got := r.byID["pay-1"].Status; got != domain.StatusCODPending {
+		t.Fatalf("status = %s, want COD_PENDING", got)
+	}
+}
+
+func TestHandleOrderStatusChangedMissingOrderID(t *testing.T) {
+	s, _ := newService(t)
+	ev := kafkax.Event{EventID: "e", Type: "order.status_changed", Payload: json.RawMessage(`{"to":"COMPLETED"}`)}
+	if err := s.HandleOrderEvent(context.Background(), ev); err == nil {
+		t.Fatal("order_id kosong harus error")
 	}
 }

@@ -115,6 +115,12 @@ func CanVerify(status string) bool {
 	return status == StatusWaitingVerification
 }
 
+// CanMarkCODPaid melaporkan apakah pembayaran COD boleh ditandai lunas
+// (saat pesanan selesai).
+func CanMarkCODPaid(status string) bool {
+	return status == StatusCODPending
+}
+
 // IsCancellable melaporkan apakah pembayaran boleh dibatalkan (pesanan batal/kedaluwarsa).
 func IsCancellable(status string) bool {
 	switch status {

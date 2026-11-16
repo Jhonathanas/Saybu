@@ -28,6 +28,7 @@ import (
 	logpkg "saybu/pkg/logger"
 	"saybu/pkg/storage"
 	"saybu/pkg/telemetry"
+	"saybu/services/gateway/internal/auditmw"
 	"saybu/services/gateway/internal/authmw"
 	"saybu/services/gateway/internal/handlers"
 	"saybu/services/gateway/internal/ratelimit"
@@ -117,6 +118,8 @@ func main() {
 	shippingHandler := handlers.NewShipping(shippingClient, log)
 
 	orderHandler := handlers.NewOrder(orderClient, log, ratelimit.New(10, time.Minute))
+
+	adminHandler := handlers.NewAdmin(orderClient, catalogClient, log)
 
 	paymentHandler := handlers.NewPayment(
 		paymentClient,
@@ -261,7 +264,13 @@ func main() {
 
 			r.Route("/admin", func(r chi.Router) {
 				r.Use(authmw.RequireRole("admin"))
+				r.Use(auditmw.Middleware(log))
 				r.Get("/users", authHandler.ListUsers)
+
+				r.Get("/orders", adminHandler.ListOrders)
+				r.Get("/orders/{id}", adminHandler.GetOrder)
+				r.Patch("/orders/{id}/status", adminHandler.UpdateStatus)
+				r.Get("/stats/today", adminHandler.TodayStats)
 
 				r.Get("/products", catalogHandler.AdminListProducts)
 				r.Post("/products", catalogHandler.CreateProduct)

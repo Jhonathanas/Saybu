@@ -24,6 +24,9 @@ const (
 	producerName       = "payment-svc"
 )
 
+// orderStatusCompleted adalah status pesanan yang memicu pelunasan COD.
+const orderStatusCompleted = "COMPLETED"
+
 // Repo adalah kebutuhan service terhadap database.
 type Repo interface {
 	CreateFromOrder(ctx context.Context, in repo.CreateInput) (domain.Payment, bool, error)
@@ -34,6 +37,7 @@ type Repo interface {
 	AttachProof(ctx context.Context, paymentID string, proof domain.Proof, events func(domain.Payment) ([]outbox.Record, error)) (domain.Payment, error)
 	Verify(ctx context.Context, paymentID, toStatus, note, verifiedBy string, events func(domain.Payment) ([]outbox.Record, error)) (domain.Payment, error)
 	CancelFromOrderEvent(ctx context.Context, eventID, eventType, orderID string) (bool, error)
+	MarkCODPaidFromOrderEvent(ctx context.Context, eventID, eventType, orderID string) (bool, error)
 }
 
 // Service adalah usecase pembayaran.
@@ -215,6 +219,26 @@ func (s *Service) HandleOrderEvent(ctx context.Context, ev kafkax.Event) error {
 			return fmt.Errorf("service: event %s tanpa order_id", ev.Type)
 		}
 		if _, err := s.repo.CancelFromOrderEvent(ctx, ev.EventID, ev.Type, p.OrderID); err != nil {
+			return err
+		}
+		return nil
+
+	case "order.status_changed":
+		var p struct {
+			OrderID string `json:"order_id"`
+			To      string `json:"to"`
+		}
+		if err := json.Unmarshal(ev.Payload, &p); err != nil {
+			return fmt.Errorf("service: payload order.status_changed tidak valid: %w", err)
+		}
+		if strings.TrimSpace(p.OrderID) == "" {
+			return fmt.Errorf("service: event order.status_changed tanpa order_id")
+		}
+		// Hanya pesanan yang selesai yang melunasi COD; transisi lain diabaikan.
+		if strings.TrimSpace(p.To) != orderStatusCompleted {
+			return nil
+		}
+		if _, err := s.repo.MarkCODPaidFromOrderEvent(ctx, ev.EventID, ev.Type, p.OrderID); err != nil {
 			return err
 		}
 		return nil

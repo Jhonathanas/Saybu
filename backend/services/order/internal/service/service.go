@@ -39,6 +39,8 @@ type Repo interface {
 	GetOrderByCode(ctx context.Context, code string) (domain.Order, error)
 	GetOrderByID(ctx context.Context, id string) (domain.Order, error)
 	ListOrdersByUser(ctx context.Context, userID string, page, limit int) ([]domain.Order, int64, error)
+	ListOrders(ctx context.Context, f domain.ListOrdersFilter) ([]domain.Order, int64, error)
+	TodayStats(ctx context.Context) (domain.TodayStats, error)
 	CreateOrder(ctx context.Context, o domain.Order, idem repo.Idempotency, events func(domain.Order) ([]outbox.Record, error)) (domain.Order, error)
 	Transition(ctx context.Context, id, from, to, note, actor string, events func(domain.Order) ([]outbox.Record, error)) (domain.Order, error)
 	TransitionFromPayment(ctx context.Context, eventID, eventType, orderID, from, to, note, actor string, events func(domain.Order) ([]outbox.Record, error)) (domain.Order, bool, error)
@@ -193,6 +195,62 @@ func (s *Service) ListMyOrders(ctx context.Context, userID string, page, limit i
 		return nil, 0, 0, 0, err
 	}
 	return orders, total, page, limit, nil
+}
+
+// GetOrderByID mengambil pesanan berdasarkan id untuk panel admin.
+func (s *Service) GetOrderByID(ctx context.Context, id string) (domain.Order, error) {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return domain.Order{}, (&domain.ValidationError{}).Add("id", "ID pesanan wajib diisi.")
+	}
+	return s.repo.GetOrderByID(ctx, id)
+}
+
+// ListOrders mengambil daftar pesanan untuk admin dengan filter & paginasi.
+func (s *Service) ListOrders(ctx context.Context, f domain.ListOrdersFilter) ([]domain.Order, int64, int, int, error) {
+	f.Normalize()
+	if err := f.Validate(); err != nil {
+		return nil, 0, 0, 0, err
+	}
+	orders, total, err := s.repo.ListOrders(ctx, f)
+	if err != nil {
+		return nil, 0, 0, 0, err
+	}
+	return orders, total, f.Page, f.Limit, nil
+}
+
+// UpdateStatus memindahkan status pesanan oleh admin. Transisi divalidasi
+// terhadap status saat ini; transisi ilegal ditolak (ErrInvalidTransition).
+func (s *Service) UpdateStatus(ctx context.Context, id, to, note, actor string) (domain.Order, error) {
+	id = strings.TrimSpace(id)
+	to = strings.TrimSpace(to)
+	if id == "" {
+		return domain.Order{}, (&domain.ValidationError{}).Add("id", "ID pesanan wajib diisi.")
+	}
+	if !domain.IsValidStatus(to) {
+		return domain.Order{}, (&domain.ValidationError{}).Add("status", "Status tidak dikenal.")
+	}
+
+	o, err := s.repo.GetOrderByID(ctx, id)
+	if err != nil {
+		return domain.Order{}, err
+	}
+	if !domain.CanTransition(o.Status, to) {
+		return domain.Order{}, domain.ErrInvalidTransition
+	}
+
+	note = strings.TrimSpace(note)
+	actor = actorOr(actor, "admin")
+	from := o.Status
+	return s.repo.Transition(ctx, id, from, to, note, actor,
+		func(ord domain.Order) ([]outbox.Record, error) {
+			return s.statusChangedEvent(ord, from, to, actor, note)
+		})
+}
+
+// GetTodayStats mengambil ringkasan operasional hari ini untuk dashboard admin.
+func (s *Service) GetTodayStats(ctx context.Context) (domain.TodayStats, error) {
+	return s.repo.TodayStats(ctx)
 }
 
 // CancelOrder membatalkan pesanan pembeli selama status mengizinkan.

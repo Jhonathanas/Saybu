@@ -112,7 +112,7 @@ func TestRepoIntegration(t *testing.T) {
 
 	// Reservasi stok.
 	orderID := ids.New()
-	insufficient, err := r.ReserveStock(ctx, orderID, []domain.StockItem{{ProductID: created.ID, Qty: 1000}})
+	insufficient, err := r.ReserveStock(ctx, orderID, []domain.StockItem{{ProductID: created.ID, Qty: 1000}}, nil)
 	if err != nil || len(insufficient) != 0 {
 		t.Fatalf("ReserveStock = %+v, %v", insufficient, err)
 	}
@@ -122,7 +122,7 @@ func TestRepoIntegration(t *testing.T) {
 	}
 
 	// Reservasi melebihi stok harus gagal & tidak mengubah stok.
-	insufficient, err = r.ReserveStock(ctx, ids.New(), []domain.StockItem{{ProductID: created.ID, Qty: 999999}})
+	insufficient, err = r.ReserveStock(ctx, ids.New(), []domain.StockItem{{ProductID: created.ID, Qty: 999999}}, nil)
 	if err != nil || len(insufficient) != 1 {
 		t.Fatalf("reserve berlebih = %+v, %v", insufficient, err)
 	}
@@ -138,7 +138,7 @@ func TestRepoIntegration(t *testing.T) {
 
 	// ReleaseStockOnce: idempotent terhadap event_id (dipakai konsumer Kafka).
 	orderID2 := ids.New()
-	if _, err := r.ReserveStock(ctx, orderID2, []domain.StockItem{{ProductID: created.ID, Qty: 500}}); err != nil {
+	if _, err := r.ReserveStock(ctx, orderID2, []domain.StockItem{{ProductID: created.ID, Qty: 500}}, nil); err != nil {
 		t.Fatal(err)
 	}
 	eventID := ids.New()

@@ -487,6 +487,162 @@ func (x *ListProductsResponse) GetTotal() int64 {
 	return 0
 }
 
+type ListLowStockRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Limit         int32                  `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListLowStockRequest) Reset() {
+	*x = ListLowStockRequest{}
+	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListLowStockRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListLowStockRequest) ProtoMessage() {}
+
+func (x *ListLowStockRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListLowStockRequest.ProtoReflect.Descriptor instead.
+func (*ListLowStockRequest) Descriptor() ([]byte, []int) {
+	return file_saybu_catalog_v1_catalog_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *ListLowStockRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+type LowStockProduct struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProductId     string                 `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Stock         int64                  `protobuf:"varint,3,opt,name=stock,proto3" json:"stock,omitempty"` // satuan terkecil (gram untuk kg)
+	Unit          string                 `protobuf:"bytes,4,opt,name=unit,proto3" json:"unit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LowStockProduct) Reset() {
+	*x = LowStockProduct{}
+	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LowStockProduct) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LowStockProduct) ProtoMessage() {}
+
+func (x *LowStockProduct) ProtoReflect() protoreflect.Message {
+	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LowStockProduct.ProtoReflect.Descriptor instead.
+func (*LowStockProduct) Descriptor() ([]byte, []int) {
+	return file_saybu_catalog_v1_catalog_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *LowStockProduct) GetProductId() string {
+	if x != nil {
+		return x.ProductId
+	}
+	return ""
+}
+
+func (x *LowStockProduct) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *LowStockProduct) GetStock() int64 {
+	if x != nil {
+		return x.Stock
+	}
+	return 0
+}
+
+func (x *LowStockProduct) GetUnit() string {
+	if x != nil {
+		return x.Unit
+	}
+	return ""
+}
+
+type ListLowStockResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Products      []*LowStockProduct     `protobuf:"bytes,1,rep,name=products,proto3" json:"products,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListLowStockResponse) Reset() {
+	*x = ListLowStockResponse{}
+	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListLowStockResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListLowStockResponse) ProtoMessage() {}
+
+func (x *ListLowStockResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListLowStockResponse.ProtoReflect.Descriptor instead.
+func (*ListLowStockResponse) Descriptor() ([]byte, []int) {
+	return file_saybu_catalog_v1_catalog_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *ListLowStockResponse) GetProducts() []*LowStockProduct {
+	if x != nil {
+		return x.Products
+	}
+	return nil
+}
+
 type GetProductRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -498,7 +654,7 @@ type GetProductRequest struct {
 
 func (x *GetProductRequest) Reset() {
 	*x = GetProductRequest{}
-	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[6]
+	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -510,7 +666,7 @@ func (x *GetProductRequest) String() string {
 func (*GetProductRequest) ProtoMessage() {}
 
 func (x *GetProductRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[6]
+	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -523,7 +679,7 @@ func (x *GetProductRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetProductRequest.ProtoReflect.Descriptor instead.
 func (*GetProductRequest) Descriptor() ([]byte, []int) {
-	return file_saybu_catalog_v1_catalog_proto_rawDescGZIP(), []int{6}
+	return file_saybu_catalog_v1_catalog_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *GetProductRequest) GetId() string {
@@ -566,7 +722,7 @@ type CreateProductRequest struct {
 
 func (x *CreateProductRequest) Reset() {
 	*x = CreateProductRequest{}
-	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[7]
+	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -578,7 +734,7 @@ func (x *CreateProductRequest) String() string {
 func (*CreateProductRequest) ProtoMessage() {}
 
 func (x *CreateProductRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[7]
+	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -591,7 +747,7 @@ func (x *CreateProductRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateProductRequest.ProtoReflect.Descriptor instead.
 func (*CreateProductRequest) Descriptor() ([]byte, []int) {
-	return file_saybu_catalog_v1_catalog_proto_rawDescGZIP(), []int{7}
+	return file_saybu_catalog_v1_catalog_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *CreateProductRequest) GetName() string {
@@ -692,7 +848,7 @@ type UpdateProductRequest struct {
 
 func (x *UpdateProductRequest) Reset() {
 	*x = UpdateProductRequest{}
-	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[8]
+	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -704,7 +860,7 @@ func (x *UpdateProductRequest) String() string {
 func (*UpdateProductRequest) ProtoMessage() {}
 
 func (x *UpdateProductRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[8]
+	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -717,7 +873,7 @@ func (x *UpdateProductRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateProductRequest.ProtoReflect.Descriptor instead.
 func (*UpdateProductRequest) Descriptor() ([]byte, []int) {
-	return file_saybu_catalog_v1_catalog_proto_rawDescGZIP(), []int{8}
+	return file_saybu_catalog_v1_catalog_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *UpdateProductRequest) GetId() string {
@@ -815,7 +971,7 @@ type SetStockRequest struct {
 
 func (x *SetStockRequest) Reset() {
 	*x = SetStockRequest{}
-	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[9]
+	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -827,7 +983,7 @@ func (x *SetStockRequest) String() string {
 func (*SetStockRequest) ProtoMessage() {}
 
 func (x *SetStockRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[9]
+	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -840,7 +996,7 @@ func (x *SetStockRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetStockRequest.ProtoReflect.Descriptor instead.
 func (*SetStockRequest) Descriptor() ([]byte, []int) {
-	return file_saybu_catalog_v1_catalog_proto_rawDescGZIP(), []int{9}
+	return file_saybu_catalog_v1_catalog_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *SetStockRequest) GetProductId() string {
@@ -873,7 +1029,7 @@ type DeleteProductRequest struct {
 
 func (x *DeleteProductRequest) Reset() {
 	*x = DeleteProductRequest{}
-	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[10]
+	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -885,7 +1041,7 @@ func (x *DeleteProductRequest) String() string {
 func (*DeleteProductRequest) ProtoMessage() {}
 
 func (x *DeleteProductRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[10]
+	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -898,7 +1054,7 @@ func (x *DeleteProductRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteProductRequest.ProtoReflect.Descriptor instead.
 func (*DeleteProductRequest) Descriptor() ([]byte, []int) {
-	return file_saybu_catalog_v1_catalog_proto_rawDescGZIP(), []int{10}
+	return file_saybu_catalog_v1_catalog_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *DeleteProductRequest) GetId() string {
@@ -918,7 +1074,7 @@ type StockItem struct {
 
 func (x *StockItem) Reset() {
 	*x = StockItem{}
-	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[11]
+	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -930,7 +1086,7 @@ func (x *StockItem) String() string {
 func (*StockItem) ProtoMessage() {}
 
 func (x *StockItem) ProtoReflect() protoreflect.Message {
-	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[11]
+	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -943,7 +1099,7 @@ func (x *StockItem) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StockItem.ProtoReflect.Descriptor instead.
 func (*StockItem) Descriptor() ([]byte, []int) {
-	return file_saybu_catalog_v1_catalog_proto_rawDescGZIP(), []int{11}
+	return file_saybu_catalog_v1_catalog_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *StockItem) GetProductId() string {
@@ -969,7 +1125,7 @@ type CheckStockRequest struct {
 
 func (x *CheckStockRequest) Reset() {
 	*x = CheckStockRequest{}
-	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[12]
+	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -981,7 +1137,7 @@ func (x *CheckStockRequest) String() string {
 func (*CheckStockRequest) ProtoMessage() {}
 
 func (x *CheckStockRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[12]
+	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -994,7 +1150,7 @@ func (x *CheckStockRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CheckStockRequest.ProtoReflect.Descriptor instead.
 func (*CheckStockRequest) Descriptor() ([]byte, []int) {
-	return file_saybu_catalog_v1_catalog_proto_rawDescGZIP(), []int{12}
+	return file_saybu_catalog_v1_catalog_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *CheckStockRequest) GetItems() []*StockItem {
@@ -1017,7 +1173,7 @@ type StockStatus struct {
 
 func (x *StockStatus) Reset() {
 	*x = StockStatus{}
-	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[13]
+	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1029,7 +1185,7 @@ func (x *StockStatus) String() string {
 func (*StockStatus) ProtoMessage() {}
 
 func (x *StockStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[13]
+	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1042,7 +1198,7 @@ func (x *StockStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StockStatus.ProtoReflect.Descriptor instead.
 func (*StockStatus) Descriptor() ([]byte, []int) {
-	return file_saybu_catalog_v1_catalog_proto_rawDescGZIP(), []int{13}
+	return file_saybu_catalog_v1_catalog_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *StockStatus) GetProductId() string {
@@ -1090,7 +1246,7 @@ type CheckStockResponse struct {
 
 func (x *CheckStockResponse) Reset() {
 	*x = CheckStockResponse{}
-	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[14]
+	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1102,7 +1258,7 @@ func (x *CheckStockResponse) String() string {
 func (*CheckStockResponse) ProtoMessage() {}
 
 func (x *CheckStockResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[14]
+	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1115,7 +1271,7 @@ func (x *CheckStockResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CheckStockResponse.ProtoReflect.Descriptor instead.
 func (*CheckStockResponse) Descriptor() ([]byte, []int) {
-	return file_saybu_catalog_v1_catalog_proto_rawDescGZIP(), []int{14}
+	return file_saybu_catalog_v1_catalog_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *CheckStockResponse) GetAllOk() bool {
@@ -1142,7 +1298,7 @@ type ReserveStockRequest struct {
 
 func (x *ReserveStockRequest) Reset() {
 	*x = ReserveStockRequest{}
-	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[15]
+	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1154,7 +1310,7 @@ func (x *ReserveStockRequest) String() string {
 func (*ReserveStockRequest) ProtoMessage() {}
 
 func (x *ReserveStockRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[15]
+	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1167,7 +1323,7 @@ func (x *ReserveStockRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReserveStockRequest.ProtoReflect.Descriptor instead.
 func (*ReserveStockRequest) Descriptor() ([]byte, []int) {
-	return file_saybu_catalog_v1_catalog_proto_rawDescGZIP(), []int{15}
+	return file_saybu_catalog_v1_catalog_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ReserveStockRequest) GetOrderId() string {
@@ -1194,7 +1350,7 @@ type ReserveStockResponse struct {
 
 func (x *ReserveStockResponse) Reset() {
 	*x = ReserveStockResponse{}
-	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[16]
+	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1206,7 +1362,7 @@ func (x *ReserveStockResponse) String() string {
 func (*ReserveStockResponse) ProtoMessage() {}
 
 func (x *ReserveStockResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[16]
+	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1219,7 +1375,7 @@ func (x *ReserveStockResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReserveStockResponse.ProtoReflect.Descriptor instead.
 func (*ReserveStockResponse) Descriptor() ([]byte, []int) {
-	return file_saybu_catalog_v1_catalog_proto_rawDescGZIP(), []int{16}
+	return file_saybu_catalog_v1_catalog_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ReserveStockResponse) GetReserved() bool {
@@ -1245,7 +1401,7 @@ type ReleaseStockRequest struct {
 
 func (x *ReleaseStockRequest) Reset() {
 	*x = ReleaseStockRequest{}
-	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[17]
+	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1257,7 +1413,7 @@ func (x *ReleaseStockRequest) String() string {
 func (*ReleaseStockRequest) ProtoMessage() {}
 
 func (x *ReleaseStockRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[17]
+	mi := &file_saybu_catalog_v1_catalog_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1270,7 +1426,7 @@ func (x *ReleaseStockRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReleaseStockRequest.ProtoReflect.Descriptor instead.
 func (*ReleaseStockRequest) Descriptor() ([]byte, []int) {
-	return file_saybu_catalog_v1_catalog_proto_rawDescGZIP(), []int{17}
+	return file_saybu_catalog_v1_catalog_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *ReleaseStockRequest) GetOrderId() string {
@@ -1326,7 +1482,17 @@ const file_saybu_catalog_v1_catalog_proto_rawDesc = "" +
 	"\bproducts\x18\x01 \x03(\v2\x19.saybu.catalog.v1.ProductR\bproducts\x12\x12\n" +
 	"\x04page\x18\x02 \x01(\x05R\x04page\x12\x14\n" +
 	"\x05limit\x18\x03 \x01(\x05R\x05limit\x12\x14\n" +
-	"\x05total\x18\x04 \x01(\x03R\x05total\"b\n" +
+	"\x05total\x18\x04 \x01(\x03R\x05total\"+\n" +
+	"\x13ListLowStockRequest\x12\x14\n" +
+	"\x05limit\x18\x01 \x01(\x05R\x05limit\"n\n" +
+	"\x0fLowStockProduct\x12\x1d\n" +
+	"\n" +
+	"product_id\x18\x01 \x01(\tR\tproductId\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
+	"\x05stock\x18\x03 \x01(\x03R\x05stock\x12\x12\n" +
+	"\x04unit\x18\x04 \x01(\tR\x04unit\"U\n" +
+	"\x14ListLowStockResponse\x12=\n" +
+	"\bproducts\x18\x01 \x03(\v2!.saybu.catalog.v1.LowStockProductR\bproducts\"b\n" +
 	"\x11GetProductRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04slug\x18\x02 \x01(\tR\x04slug\x12)\n" +
@@ -1401,10 +1567,11 @@ const file_saybu_catalog_v1_catalog_proto_rawDesc = "" +
 	"\breserved\x18\x01 \x01(\bR\breserved\x12A\n" +
 	"\finsufficient\x18\x02 \x03(\v2\x1d.saybu.catalog.v1.StockStatusR\finsufficient\"0\n" +
 	"\x13ReleaseStockRequest\x12\x19\n" +
-	"\border_id\x18\x01 \x01(\tR\aorderId2\xec\x06\n" +
+	"\border_id\x18\x01 \x01(\tR\aorderId2\xcb\a\n" +
 	"\x0eCatalogService\x12c\n" +
 	"\x0eListCategories\x12'.saybu.catalog.v1.ListCategoriesRequest\x1a(.saybu.catalog.v1.ListCategoriesResponse\x12]\n" +
-	"\fListProducts\x12%.saybu.catalog.v1.ListProductsRequest\x1a&.saybu.catalog.v1.ListProductsResponse\x12L\n" +
+	"\fListProducts\x12%.saybu.catalog.v1.ListProductsRequest\x1a&.saybu.catalog.v1.ListProductsResponse\x12]\n" +
+	"\fListLowStock\x12%.saybu.catalog.v1.ListLowStockRequest\x1a&.saybu.catalog.v1.ListLowStockResponse\x12L\n" +
 	"\n" +
 	"GetProduct\x12#.saybu.catalog.v1.GetProductRequest\x1a\x19.saybu.catalog.v1.Product\x12R\n" +
 	"\rCreateProduct\x12&.saybu.catalog.v1.CreateProductRequest\x1a\x19.saybu.catalog.v1.Product\x12R\n" +
@@ -1428,7 +1595,7 @@ func file_saybu_catalog_v1_catalog_proto_rawDescGZIP() []byte {
 	return file_saybu_catalog_v1_catalog_proto_rawDescData
 }
 
-var file_saybu_catalog_v1_catalog_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_saybu_catalog_v1_catalog_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
 var file_saybu_catalog_v1_catalog_proto_goTypes = []any{
 	(*Category)(nil),               // 0: saybu.catalog.v1.Category
 	(*Product)(nil),                // 1: saybu.catalog.v1.Product
@@ -1436,53 +1603,59 @@ var file_saybu_catalog_v1_catalog_proto_goTypes = []any{
 	(*ListCategoriesResponse)(nil), // 3: saybu.catalog.v1.ListCategoriesResponse
 	(*ListProductsRequest)(nil),    // 4: saybu.catalog.v1.ListProductsRequest
 	(*ListProductsResponse)(nil),   // 5: saybu.catalog.v1.ListProductsResponse
-	(*GetProductRequest)(nil),      // 6: saybu.catalog.v1.GetProductRequest
-	(*CreateProductRequest)(nil),   // 7: saybu.catalog.v1.CreateProductRequest
-	(*UpdateProductRequest)(nil),   // 8: saybu.catalog.v1.UpdateProductRequest
-	(*SetStockRequest)(nil),        // 9: saybu.catalog.v1.SetStockRequest
-	(*DeleteProductRequest)(nil),   // 10: saybu.catalog.v1.DeleteProductRequest
-	(*StockItem)(nil),              // 11: saybu.catalog.v1.StockItem
-	(*CheckStockRequest)(nil),      // 12: saybu.catalog.v1.CheckStockRequest
-	(*StockStatus)(nil),            // 13: saybu.catalog.v1.StockStatus
-	(*CheckStockResponse)(nil),     // 14: saybu.catalog.v1.CheckStockResponse
-	(*ReserveStockRequest)(nil),    // 15: saybu.catalog.v1.ReserveStockRequest
-	(*ReserveStockResponse)(nil),   // 16: saybu.catalog.v1.ReserveStockResponse
-	(*ReleaseStockRequest)(nil),    // 17: saybu.catalog.v1.ReleaseStockRequest
-	(*emptypb.Empty)(nil),          // 18: google.protobuf.Empty
+	(*ListLowStockRequest)(nil),    // 6: saybu.catalog.v1.ListLowStockRequest
+	(*LowStockProduct)(nil),        // 7: saybu.catalog.v1.LowStockProduct
+	(*ListLowStockResponse)(nil),   // 8: saybu.catalog.v1.ListLowStockResponse
+	(*GetProductRequest)(nil),      // 9: saybu.catalog.v1.GetProductRequest
+	(*CreateProductRequest)(nil),   // 10: saybu.catalog.v1.CreateProductRequest
+	(*UpdateProductRequest)(nil),   // 11: saybu.catalog.v1.UpdateProductRequest
+	(*SetStockRequest)(nil),        // 12: saybu.catalog.v1.SetStockRequest
+	(*DeleteProductRequest)(nil),   // 13: saybu.catalog.v1.DeleteProductRequest
+	(*StockItem)(nil),              // 14: saybu.catalog.v1.StockItem
+	(*CheckStockRequest)(nil),      // 15: saybu.catalog.v1.CheckStockRequest
+	(*StockStatus)(nil),            // 16: saybu.catalog.v1.StockStatus
+	(*CheckStockResponse)(nil),     // 17: saybu.catalog.v1.CheckStockResponse
+	(*ReserveStockRequest)(nil),    // 18: saybu.catalog.v1.ReserveStockRequest
+	(*ReserveStockResponse)(nil),   // 19: saybu.catalog.v1.ReserveStockResponse
+	(*ReleaseStockRequest)(nil),    // 20: saybu.catalog.v1.ReleaseStockRequest
+	(*emptypb.Empty)(nil),          // 21: google.protobuf.Empty
 }
 var file_saybu_catalog_v1_catalog_proto_depIdxs = []int32{
 	0,  // 0: saybu.catalog.v1.Product.category:type_name -> saybu.catalog.v1.Category
 	0,  // 1: saybu.catalog.v1.ListCategoriesResponse.categories:type_name -> saybu.catalog.v1.Category
 	1,  // 2: saybu.catalog.v1.ListProductsResponse.products:type_name -> saybu.catalog.v1.Product
-	11, // 3: saybu.catalog.v1.CheckStockRequest.items:type_name -> saybu.catalog.v1.StockItem
-	13, // 4: saybu.catalog.v1.CheckStockResponse.items:type_name -> saybu.catalog.v1.StockStatus
-	11, // 5: saybu.catalog.v1.ReserveStockRequest.items:type_name -> saybu.catalog.v1.StockItem
-	13, // 6: saybu.catalog.v1.ReserveStockResponse.insufficient:type_name -> saybu.catalog.v1.StockStatus
-	2,  // 7: saybu.catalog.v1.CatalogService.ListCategories:input_type -> saybu.catalog.v1.ListCategoriesRequest
-	4,  // 8: saybu.catalog.v1.CatalogService.ListProducts:input_type -> saybu.catalog.v1.ListProductsRequest
-	6,  // 9: saybu.catalog.v1.CatalogService.GetProduct:input_type -> saybu.catalog.v1.GetProductRequest
-	7,  // 10: saybu.catalog.v1.CatalogService.CreateProduct:input_type -> saybu.catalog.v1.CreateProductRequest
-	8,  // 11: saybu.catalog.v1.CatalogService.UpdateProduct:input_type -> saybu.catalog.v1.UpdateProductRequest
-	9,  // 12: saybu.catalog.v1.CatalogService.SetStock:input_type -> saybu.catalog.v1.SetStockRequest
-	10, // 13: saybu.catalog.v1.CatalogService.DeleteProduct:input_type -> saybu.catalog.v1.DeleteProductRequest
-	12, // 14: saybu.catalog.v1.CatalogService.CheckStock:input_type -> saybu.catalog.v1.CheckStockRequest
-	15, // 15: saybu.catalog.v1.CatalogService.ReserveStock:input_type -> saybu.catalog.v1.ReserveStockRequest
-	17, // 16: saybu.catalog.v1.CatalogService.ReleaseStock:input_type -> saybu.catalog.v1.ReleaseStockRequest
-	3,  // 17: saybu.catalog.v1.CatalogService.ListCategories:output_type -> saybu.catalog.v1.ListCategoriesResponse
-	5,  // 18: saybu.catalog.v1.CatalogService.ListProducts:output_type -> saybu.catalog.v1.ListProductsResponse
-	1,  // 19: saybu.catalog.v1.CatalogService.GetProduct:output_type -> saybu.catalog.v1.Product
-	1,  // 20: saybu.catalog.v1.CatalogService.CreateProduct:output_type -> saybu.catalog.v1.Product
-	1,  // 21: saybu.catalog.v1.CatalogService.UpdateProduct:output_type -> saybu.catalog.v1.Product
-	1,  // 22: saybu.catalog.v1.CatalogService.SetStock:output_type -> saybu.catalog.v1.Product
-	18, // 23: saybu.catalog.v1.CatalogService.DeleteProduct:output_type -> google.protobuf.Empty
-	14, // 24: saybu.catalog.v1.CatalogService.CheckStock:output_type -> saybu.catalog.v1.CheckStockResponse
-	16, // 25: saybu.catalog.v1.CatalogService.ReserveStock:output_type -> saybu.catalog.v1.ReserveStockResponse
-	18, // 26: saybu.catalog.v1.CatalogService.ReleaseStock:output_type -> google.protobuf.Empty
-	17, // [17:27] is the sub-list for method output_type
-	7,  // [7:17] is the sub-list for method input_type
-	7,  // [7:7] is the sub-list for extension type_name
-	7,  // [7:7] is the sub-list for extension extendee
-	0,  // [0:7] is the sub-list for field type_name
+	7,  // 3: saybu.catalog.v1.ListLowStockResponse.products:type_name -> saybu.catalog.v1.LowStockProduct
+	14, // 4: saybu.catalog.v1.CheckStockRequest.items:type_name -> saybu.catalog.v1.StockItem
+	16, // 5: saybu.catalog.v1.CheckStockResponse.items:type_name -> saybu.catalog.v1.StockStatus
+	14, // 6: saybu.catalog.v1.ReserveStockRequest.items:type_name -> saybu.catalog.v1.StockItem
+	16, // 7: saybu.catalog.v1.ReserveStockResponse.insufficient:type_name -> saybu.catalog.v1.StockStatus
+	2,  // 8: saybu.catalog.v1.CatalogService.ListCategories:input_type -> saybu.catalog.v1.ListCategoriesRequest
+	4,  // 9: saybu.catalog.v1.CatalogService.ListProducts:input_type -> saybu.catalog.v1.ListProductsRequest
+	6,  // 10: saybu.catalog.v1.CatalogService.ListLowStock:input_type -> saybu.catalog.v1.ListLowStockRequest
+	9,  // 11: saybu.catalog.v1.CatalogService.GetProduct:input_type -> saybu.catalog.v1.GetProductRequest
+	10, // 12: saybu.catalog.v1.CatalogService.CreateProduct:input_type -> saybu.catalog.v1.CreateProductRequest
+	11, // 13: saybu.catalog.v1.CatalogService.UpdateProduct:input_type -> saybu.catalog.v1.UpdateProductRequest
+	12, // 14: saybu.catalog.v1.CatalogService.SetStock:input_type -> saybu.catalog.v1.SetStockRequest
+	13, // 15: saybu.catalog.v1.CatalogService.DeleteProduct:input_type -> saybu.catalog.v1.DeleteProductRequest
+	15, // 16: saybu.catalog.v1.CatalogService.CheckStock:input_type -> saybu.catalog.v1.CheckStockRequest
+	18, // 17: saybu.catalog.v1.CatalogService.ReserveStock:input_type -> saybu.catalog.v1.ReserveStockRequest
+	20, // 18: saybu.catalog.v1.CatalogService.ReleaseStock:input_type -> saybu.catalog.v1.ReleaseStockRequest
+	3,  // 19: saybu.catalog.v1.CatalogService.ListCategories:output_type -> saybu.catalog.v1.ListCategoriesResponse
+	5,  // 20: saybu.catalog.v1.CatalogService.ListProducts:output_type -> saybu.catalog.v1.ListProductsResponse
+	8,  // 21: saybu.catalog.v1.CatalogService.ListLowStock:output_type -> saybu.catalog.v1.ListLowStockResponse
+	1,  // 22: saybu.catalog.v1.CatalogService.GetProduct:output_type -> saybu.catalog.v1.Product
+	1,  // 23: saybu.catalog.v1.CatalogService.CreateProduct:output_type -> saybu.catalog.v1.Product
+	1,  // 24: saybu.catalog.v1.CatalogService.UpdateProduct:output_type -> saybu.catalog.v1.Product
+	1,  // 25: saybu.catalog.v1.CatalogService.SetStock:output_type -> saybu.catalog.v1.Product
+	21, // 26: saybu.catalog.v1.CatalogService.DeleteProduct:output_type -> google.protobuf.Empty
+	17, // 27: saybu.catalog.v1.CatalogService.CheckStock:output_type -> saybu.catalog.v1.CheckStockResponse
+	19, // 28: saybu.catalog.v1.CatalogService.ReserveStock:output_type -> saybu.catalog.v1.ReserveStockResponse
+	21, // 29: saybu.catalog.v1.CatalogService.ReleaseStock:output_type -> google.protobuf.Empty
+	19, // [19:30] is the sub-list for method output_type
+	8,  // [8:19] is the sub-list for method input_type
+	8,  // [8:8] is the sub-list for extension type_name
+	8,  // [8:8] is the sub-list for extension extendee
+	0,  // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_saybu_catalog_v1_catalog_proto_init() }
@@ -1490,14 +1663,14 @@ func file_saybu_catalog_v1_catalog_proto_init() {
 	if File_saybu_catalog_v1_catalog_proto != nil {
 		return
 	}
-	file_saybu_catalog_v1_catalog_proto_msgTypes[8].OneofWrappers = []any{}
+	file_saybu_catalog_v1_catalog_proto_msgTypes[11].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_saybu_catalog_v1_catalog_proto_rawDesc), len(file_saybu_catalog_v1_catalog_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   18,
+			NumMessages:   21,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

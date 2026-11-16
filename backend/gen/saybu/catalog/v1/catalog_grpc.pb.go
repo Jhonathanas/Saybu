@@ -22,6 +22,7 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	CatalogService_ListCategories_FullMethodName = "/saybu.catalog.v1.CatalogService/ListCategories"
 	CatalogService_ListProducts_FullMethodName   = "/saybu.catalog.v1.CatalogService/ListProducts"
+	CatalogService_ListLowStock_FullMethodName   = "/saybu.catalog.v1.CatalogService/ListLowStock"
 	CatalogService_GetProduct_FullMethodName     = "/saybu.catalog.v1.CatalogService/GetProduct"
 	CatalogService_CreateProduct_FullMethodName  = "/saybu.catalog.v1.CatalogService/CreateProduct"
 	CatalogService_UpdateProduct_FullMethodName  = "/saybu.catalog.v1.CatalogService/UpdateProduct"
@@ -43,6 +44,9 @@ const (
 type CatalogServiceClient interface {
 	ListCategories(ctx context.Context, in *ListCategoriesRequest, opts ...grpc.CallOption) (*ListCategoriesResponse, error)
 	ListProducts(ctx context.Context, in *ListProductsRequest, opts ...grpc.CallOption) (*ListProductsResponse, error)
+	// ListLowStock mengembalikan produk aktif yang stoknya <= ambang menipis.
+	// Dipakai gateway untuk kartu "stok menipis" di dashboard admin (M5).
+	ListLowStock(ctx context.Context, in *ListLowStockRequest, opts ...grpc.CallOption) (*ListLowStockResponse, error)
 	GetProduct(ctx context.Context, in *GetProductRequest, opts ...grpc.CallOption) (*Product, error)
 	CreateProduct(ctx context.Context, in *CreateProductRequest, opts ...grpc.CallOption) (*Product, error)
 	UpdateProduct(ctx context.Context, in *UpdateProductRequest, opts ...grpc.CallOption) (*Product, error)
@@ -76,6 +80,16 @@ func (c *catalogServiceClient) ListProducts(ctx context.Context, in *ListProduct
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListProductsResponse)
 	err := c.cc.Invoke(ctx, CatalogService_ListProducts_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *catalogServiceClient) ListLowStock(ctx context.Context, in *ListLowStockRequest, opts ...grpc.CallOption) (*ListLowStockResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListLowStockResponse)
+	err := c.cc.Invoke(ctx, CatalogService_ListLowStock_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -173,6 +187,9 @@ func (c *catalogServiceClient) ReleaseStock(ctx context.Context, in *ReleaseStoc
 type CatalogServiceServer interface {
 	ListCategories(context.Context, *ListCategoriesRequest) (*ListCategoriesResponse, error)
 	ListProducts(context.Context, *ListProductsRequest) (*ListProductsResponse, error)
+	// ListLowStock mengembalikan produk aktif yang stoknya <= ambang menipis.
+	// Dipakai gateway untuk kartu "stok menipis" di dashboard admin (M5).
+	ListLowStock(context.Context, *ListLowStockRequest) (*ListLowStockResponse, error)
 	GetProduct(context.Context, *GetProductRequest) (*Product, error)
 	CreateProduct(context.Context, *CreateProductRequest) (*Product, error)
 	UpdateProduct(context.Context, *UpdateProductRequest) (*Product, error)
@@ -197,6 +214,9 @@ func (UnimplementedCatalogServiceServer) ListCategories(context.Context, *ListCa
 }
 func (UnimplementedCatalogServiceServer) ListProducts(context.Context, *ListProductsRequest) (*ListProductsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListProducts not implemented")
+}
+func (UnimplementedCatalogServiceServer) ListLowStock(context.Context, *ListLowStockRequest) (*ListLowStockResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListLowStock not implemented")
 }
 func (UnimplementedCatalogServiceServer) GetProduct(context.Context, *GetProductRequest) (*Product, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetProduct not implemented")
@@ -275,6 +295,24 @@ func _CatalogService_ListProducts_Handler(srv interface{}, ctx context.Context, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CatalogServiceServer).ListProducts(ctx, req.(*ListProductsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CatalogService_ListLowStock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListLowStockRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CatalogServiceServer).ListLowStock(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CatalogService_ListLowStock_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CatalogServiceServer).ListLowStock(ctx, req.(*ListLowStockRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -437,6 +475,10 @@ var CatalogService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListProducts",
 			Handler:    _CatalogService_ListProducts_Handler,
+		},
+		{
+			MethodName: "ListLowStock",
+			Handler:    _CatalogService_ListLowStock_Handler,
 		},
 		{
 			MethodName: "GetProduct",

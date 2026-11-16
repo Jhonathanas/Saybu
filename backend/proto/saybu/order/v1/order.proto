@@ -14,6 +14,12 @@ service OrderService {
   rpc GetOrderByCode(GetOrderByCodeRequest) returns (Order);
   rpc ListMyOrders(ListMyOrdersRequest) returns (ListOrdersResponse);
   rpc CancelOrder(CancelOrderRequest) returns (Order);
+
+  // RPC admin (dipakai gateway untuk panel admin).
+  rpc GetOrderByID(GetOrderByIDRequest) returns (Order);
+  rpc ListOrders(ListOrdersRequest) returns (ListOrdersResponse);
+  rpc UpdateStatus(UpdateStatusRequest) returns (Order);
+  rpc GetTodayStats(GetTodayStatsRequest) returns (TodayStats);
 }
 
 message Customer {
@@ -110,4 +116,32 @@ message CancelOrderRequest {
   string phone = 2;
   string user_id = 3;
   string reason = 4;
+}
+
+message GetOrderByIDRequest {
+  string id = 1;
+}
+
+message ListOrdersRequest {
+  string status = 1;    // filter status (opsional)
+  string date_from = 2; // YYYY-MM-DD (opsional, inklusif, zona Asia/Jakarta)
+  string date_to = 3;   // YYYY-MM-DD (opsional, inklusif)
+  string q = 4;         // cari kode / nama / nomor HP pelanggan
+  int32 page = 5;
+  int32 limit = 6;
+}
+
+message UpdateStatusRequest {
+  string id = 1;
+  string status = 2; // status tujuan
+  string note = 3;   // catatan admin (opsional)
+  string actor = 4;  // id user admin (dari token)
+}
+
+message GetTodayStatsRequest {}
+
+message TodayStats {
+  int64 orders_count = 1;          // pesanan dibuat hari ini (Asia/Jakarta)
+  int64 revenue_paid = 2;          // total pesanan hari ini yang sudah lunas
+  int64 awaiting_verification = 3; // pesanan berstatus WAITING_VERIFICATION saat ini
 }
