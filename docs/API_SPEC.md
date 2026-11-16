@@ -300,10 +300,13 @@ Boleh selama status `PENDING_PAYMENT` / `WAITING_VERIFICATION` / `PAID`.
 
 ## 6. Pembayaran
 
-> **Status implementasi:** endpoint di §6 belum ada (M4). Pada M3, halaman sukses checkout
-> menampilkan instruksi transfer dari env frontend (`VITE_BANK_NAME`, `VITE_BANK_ACCOUNT`,
-> `VITE_BANK_HOLDER`) dan kode pesanan untuk konfirmasi manual ke admin. Setelah §6.1 tersedia,
-> halaman sukses akan membaca data bank dari API ini.
+> **Status implementasi:** endpoint di §6 sudah ada (M4). Instruksi transfer & status pembayaran
+> dibaca dari §6.1; frontend memakai `VITE_BANK_*` hanya sebagai fallback bila API tidak
+> mengirim `bank`. Pembayaran dibuat otomatis dari event `order.created` (§9.1), jadi tidak ada
+> endpoint "buat pembayaran".
+
+Akses §6.1 & §6.2: pemilik akun memakai token (tanpa `phone`); guest wajib menyertakan `phone`
+yang cocok dengan pesanan (404 bila tidak cocok).
 
 ### 6.1 `GET /orders/{code}/payment`
 
@@ -323,33 +326,51 @@ Instruksi pembayaran + status.
 }
 ```
 
-`status`: `UNPAID` | `WAITING_VERIFICATION` | `PAID` | `REJECTED` | `COD_PENDING` | `COD_PAID`.
+`status`: `UNPAID` | `WAITING_VERIFICATION` | `PAID` | `REJECTED` | `CANCELLED` | `COD_PENDING` | `COD_PAID`.
+`bank` hanya terisi untuk metode `TRANSFER` (null untuk COD). `note` berisi alasan saat `REJECTED`.
 
 ### 6.2 `POST /orders/{code}/payment-proof`
 
 `multipart/form-data`:
-- `file` (wajib): JPEG/PNG/PDF, maks 5 MB
-- `phone`: wajib untuk guest
+- `file` (wajib): JPEG/PNG/PDF, maks 5 MB (validasi ekstensi + tipe konten di gateway)
+- `phone`: wajib untuk guest (diabaikan bila pemilik memakai token)
 
 **200** → `{ "data": { "status": "WAITING_VERIFICATION", "proof_url": "/uploads/..." } }`
-**409** bila pesanan tidak berstatus `PENDING_PAYMENT` atau `REJECTED`.
+**409** bila status pembayaran bukan `UNPAID` atau `REJECTED` (mis. sudah menunggu verifikasi).
+Rate limit 5/menit per IP.
 
 ### 6.3 Verifikasi (admin)
 
 `GET /admin/payments?status=WAITING_VERIFICATION&page=1&limit=20`
 
 ```json
-{ "data": [ { "id": "...", "order_code": "SB-...", "amount": 85000, "proof_url": "...", "uploaded_at": "...", "status": "WAITING_VERIFICATION" } ] }
+{
+  "data": [
+    {
+      "id": "...",
+      "order_code": "SB-...",
+      "customer_name": "Siti",
+      "customer_phone": "0812...",
+      "method": "TRANSFER",
+      "amount": 85000,
+      "proof_url": "...",
+      "uploaded_at": "...",
+      "status": "WAITING_VERIFICATION"
+    }
+  ],
+  "meta": { "page": 1, "limit": 20, "total": 3 }
+}
 ```
 
-`POST /admin/payments/{id}/verify`
+`status` opsional (filter). `POST /admin/payments/{id}/verify`
 
 ```json
 { "decision": "APPROVE", "note": "Dana masuk 11/11 10.25" }
 ```
 
-`decision`: `APPROVE` | `REJECT`.
-**200** → status pembayaran & pesanan diperbarui (lewat event).
+`decision`: `APPROVE` | `REJECT`. **200** → status pembayaran & pesanan diperbarui (lewat event
+`payment.confirmed`/`payment.rejected`, §9.2). `409` bila status bukan `WAITING_VERIFICATION`.
+Saat `REJECT`, `note` sebaiknya diisi sebagai alasan untuk pelanggan.
 
 ---
 
@@ -525,11 +546,17 @@ service OrderService {
 ```proto
 service PaymentService {
   rpc GetPaymentByOrderCode(GetPaymentByOrderCodeRequest) returns (Payment);
-  rpc UploadProof(stream UploadProofRequest) returns (Payment); // chunked upload
-  rpc ListPendingPayments(ListPendingPaymentsRequest) returns (ListPaymentsResponse);
+  rpc UploadProof(UploadProofRequest) returns (Payment);
+  rpc ListPayments(ListPaymentsRequest) returns (ListPaymentsResponse);
   rpc VerifyPayment(VerifyPaymentRequest) returns (Payment);
 }
 ```
+
+> **M4 (penyimpangan dari rencana chunked):** `UploadProof` **unary**, bukan `stream`. Gateway yang
+> menyimpan berkas bukti ke disk (validasi ekstensi + `http.DetectContentType`, batas 5 MB) lalu memanggil
+> `UploadProof(code, phone, user_id, proof_url, size_bytes, content_type)`. Service pembayaran hanya
+> menyimpan URL, tidak menangani byte berkas. Alasan: satu jalur unggah & rate limit di gateway, selaras
+> dengan unggah gambar katalog (§7.5). `ListPendingPayments` dinamai `ListPayments` (mendukung filter status).
 
 ---
 
@@ -552,6 +579,7 @@ Envelope (semua event):
 // order.created
 {
   "order_id": "...", "code": "SB-20261111-0007",
+  "user_id": "0192...",                       // kosong untuk guest (M4)
   "customer": { "name": "Siti", "phone": "0812..." },
   "fulfillment": "DELIVERY", "payment_method": "TRANSFER",
   "zone_name": "Kec. Sukamaju", "address_line": "Jl. Melati 12",
@@ -571,8 +599,12 @@ Envelope (semua event):
 ```
 
 > **M3** memancarkan `order.created` (saat checkout) serta `order.cancelled` dan `order.expired` (dari gateway
-> dan job expire). `order.status_changed` baru dipancarkan pada M5 (admin `UpdateStatus`). Konsumer catalog
-> (`catalog-svc`) bereaksi pada `order.cancelled`/`order.expired` untuk melepas reservasi stok secara idempoten.
+> dan job expire). Konsumer catalog (`catalog-svc`) bereaksi pada `order.cancelled`/`order.expired` untuk
+> melepas reservasi stok secara idempoten.
+>
+> **M4** menambahkan `user_id` (aditif) pada `order.created` dan mulai memancarkan `order.status_changed`
+> ketika status berubah karena event pembayaran (§9.2). `order.cancelled` dari pembatalan manual juga
+> dikonsumsi service payment untuk menandai pembayaran `CANCELLED`.
 
 ### 9.2 `payment.events.v1`
 
@@ -586,6 +618,11 @@ Envelope (semua event):
 // payment.rejected
 { "payment_id": "...", "order_id": "...", "code": "SB-...", "reason": "Bukti tidak jelas" }
 ```
+
+> **M4** memancarkan ketiga event dari service payment (lewat outbox). Konsumer: service order
+> (`payment.proof_uploaded`/`confirmed`/`rejected` → transisi status pesanan + `order.status_changed`),
+> service catalog (`payment.confirmed` → reservasi stok `CONFIRMED`), dan notification
+> (semua event → Telegram). Semua konsumer idempoten via `processed_events`.
 
 ### 9.3 `catalog.events.v1`
 

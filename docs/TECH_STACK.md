@@ -223,7 +223,8 @@ Dibaca dari `frontend/.env` (lihat `frontend/.env.example`).
 VITE_API_BASE_URL=/api/v1
 VITE_PROXY_TARGET=http://localhost:8081
 
-# Instruksi transfer di halaman sukses checkout (selaras dengan BANK_* backend).
+# Instruksi transfer — sumber utama dari API pembayaran (GET /orders/{code}/payment).
+# Nilai ini hanya fallback bila API tidak mengirim data bank.
 VITE_BANK_NAME="BCA"
 VITE_BANK_ACCOUNT="1234567890"
 VITE_BANK_HOLDER="Saybu Buah & Sayur"

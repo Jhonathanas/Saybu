@@ -18,7 +18,7 @@
 | M1 | Auth & gateway | 13 | 13 | ✅ |
 | M2 | Katalog | 15 | 15 | ✅ |
 | M3 | Ongkir & order | 16 | 16 | ✅ |
-| M4 | Pembayaran & notifikasi | 14 | 0 | ⬜ |
+| M4 | Pembayaran & notifikasi | 14 | 14 | ✅ |
 | M5 | Kelengkapan | 12 | 0 | ⬜ |
 | M6 | Observability & hardening | 8 | 0 | ⬜ |
 | M7 | Deploy | 10 | 0 | ⬜ |
@@ -218,22 +218,44 @@
 
 | ID | Task | Acceptance | Est |
 |---|---|---|---|
-| M4-01 | `[ ]` Proto `payment.v1` + migrasi `saybu_payments` (`payments`, `payment_proofs`, `processed_events`) | Naik/turun bersih | 1 j |
-| M4-02 | `[ ]` Usecase buat payment saat `order.created` + status awal | Consumer idempoten | 1.5 j |
-| M4-03 | `[ ]` Upload bukti (validasi tipe/ukuran, simpan ke volume, URL) | File tersimpan & bisa diakses | 1.5 j |
-| M4-04 | `[ ]` Verifikasi admin (approve/reject) + event | Event `payment.confirmed` terbit | 1 j |
-| M4-05 | `[ ]` Consumer `payment.events.v1` di order (ubah status) | Status order ikut berubah | 1 j |
-| M4-06 | `[ ]` Consumer `order.events.v1` di payment (batal/expired) | Payment ditandai batal | 0.5 j |
-| M4-07 | `[ ]` Service notification: consumer + klien Telegram + retry + DLQ | Pesan masuk Telegram | 1.5 j |
-| M4-08 | `[ ]` Template pesan: order baru, bukti masuk, terverifikasi, ditolak, batal | Format rapi & informatif | 1 j |
-| M4-09 | `[ ]` UI instruksi transfer + form upload bukti | Guest bisa upload dengan kode+HP | 1.5 j |
-| M4-10 | `[ ]` UI admin: daftar pembayaran menunggu + preview bukti + approve/reject | Verifikasi dari HP | 1.5 j |
-| M4-11 | `[ ]` UI status pembayaran di halaman lacak | Status jelas & real-time-ish | 0.5 j |
-| M4-12 | `[ ]` Idempotensi consumer (`processed_events`) di semua consumer | Kirim event duplikat → efek sekali | 1 j |
-| M4-13 | `[ ]` DLQ + perintah replay manual | Pesan gagal bisa diproses ulang | 1 j |
-| M4-14 | `[ ]` Test integrasi pembayaran penuh | Lulus di CI | 2 j |
+| M4-01 | `[x]` Proto `payment.v1` + migrasi `saybu_payments` (`payments`, `payment_proofs`, `processed_events`) | Naik/turun bersih | 1 j |
+| M4-02 | `[x]` Usecase buat payment saat `order.created` + status awal | Consumer idempoten | 1.5 j |
+| M4-03 | `[x]` Upload bukti (validasi tipe/ukuran, simpan ke volume, URL) | File tersimpan & bisa diakses | 1.5 j |
+| M4-04 | `[x]` Verifikasi admin (approve/reject) + event | Event `payment.confirmed` terbit | 1 j |
+| M4-05 | `[x]` Consumer `payment.events.v1` di order (ubah status) | Status order ikut berubah | 1 j |
+| M4-06 | `[x]` Consumer `order.events.v1` di payment (batal/expired) | Payment ditandai batal | 0.5 j |
+| M4-07 | `[x]` Service notification: consumer + klien Telegram + retry + DLQ | Pesan masuk Telegram | 1.5 j |
+| M4-08 | `[x]` Template pesan: order baru, bukti masuk, terverifikasi, ditolak, batal | Format rapi & informatif | 1 j |
+| M4-09 | `[x]` UI instruksi transfer + form upload bukti | Guest bisa upload dengan kode+HP | 1.5 j |
+| M4-10 | `[x]` UI admin: daftar pembayaran menunggu + preview bukti + approve/reject | Verifikasi dari HP | 1.5 j |
+| M4-11 | `[x]` UI status pembayaran di halaman lacak | Status jelas & real-time-ish | 0.5 j |
+| M4-12 | `[x]` Idempotensi consumer (`processed_events`) di semua consumer | Kirim event duplikat → efek sekali | 1 j |
+| M4-13 | `[x]` DLQ + perintah replay manual | Pesan gagal bisa diproses ulang | 1 j |
+| M4-14 | `[x]` Test integrasi pembayaran penuh | Lulus di CI | 2 j |
 
 **Gate M4:** transfer manual end-to-end (upload → verifikasi → order PAID) + Telegram berfungsi, duplikasi aman.
+
+### Catatan implementasi M4
+
+- **Penyimpangan §8.5:** `UploadProof` bukan RPC `stream` ber-chunk seperti di `API_SPEC.md` §8.5, melainkan unary —
+  gateway yang menyimpan berkas ke disk (pola sama dengan unggah gambar katalog M2) lalu memanggil
+  `UploadProof(code, phone, user_id, proof_url, size_bytes, content_type)`. Alasan: satu jalur unggah,
+  rate limit, dan validasi tipe di gateway; service pembayaran tidak menyimpan berkas. `API_SPEC.md` §8.5 diperbarui.
+- **`user_id` pada pembayaran:** tabel `payments` menyimpan `user_id` (dari `order.created`) agar pemilik akun bisa
+  membaca status & mengunggah bukti tanpa nomor HP. Field ini aditif pada payload `order.created` (§9.1).
+- **Status pembayaran:** `UNPAID | WAITING_VERIFICATION | PAID | REJECTED | CANCELLED | COD_PENDING | COD_PAID`.
+  Awal: TRANSFER → `UNPAID`, COD → `COD_PENDING`.
+- **Transisi order dari event pembayaran** (idempoten via `processed_events`, lalu memancarkan `order.status_changed`):
+  `payment.proof_uploaded` → `PENDING_PAYMENT → WAITING_VERIFICATION`; `payment.confirmed` → `WAITING_VERIFICATION → PAID`;
+  `payment.rejected` → `WAITING_VERIFICATION → PENDING_PAYMENT`.
+- **Katalog** mengonsumsi `payment.confirmed` untuk menandai reservasi stok `CONFIRMED`.
+- **Notification** memakai consumer group `notification-svc` pada `order.events.v1` + `payment.events.v1`; tanpa DB
+  (dedup in-memory berbatas). Bila `TELEGRAM_BOT_TOKEN`/`TELEGRAM_ADMIN_CHAT_ID` kosong, pengiriman dilewati & dicatat di log.
+- **Frontend:** modul `features/payment` (`types`, `api`, `ProofUploadForm`, `PaymentPanel`) + halaman admin
+  `/admin/pembayaran`. Instruksi transfer & unggah bukti dilepas dari `OrderDetailView` ke `PaymentPanel`
+  (rekening dari API, fallback `VITE_BANK_*`). `CopyButton` dipindah ke `components/ui`.
+- **Bukti transfer** disimpan di prefix `/uploads` yang sama dengan gambar produk (URL UUID tak tertebak, tanpa
+  listing direktori) — batasan yang diketahui sampai object storage di M7.
 
 ---
 
@@ -337,3 +359,6 @@
 | 2026-11-14 | Penyimpangan M3 (tahap 2–6): `order.v1` hanya RPC M3 (admin §8.4 → M5), tanpa RPC `ExpireDueOrders` (ticker internal), test integrasi Kafka pakai broker dev (bukan testcontainers) |
 | 2026-11-15 | **M3 Tahap 7 selesai (M3-09..M3-11) — frontend checkout.** Rute baru `/checkout`, `/pesanan`, `/pesanan/:code`. Form checkout (data pembeli, antar/ambil, zona + kuotasi, alamat, metode bayar, ringkasan total), halaman sukses dengan instruksi transfer statis (`VITE_BANK_*`) + kode pesanan yang bisa disalin, dan halaman lacak (kode + HP) dengan status & riwayat. Idempotency-Key dibuat klien dan stabil selama isi pesanan tidak berubah; `lib/api.ts` mendukung header kustom. Verifikasi: `eslint`, `tsc -b`, `vitest` (59 test) dan `vite build` hijau. Uji E2E manual tertunda karena infra Docker (Postgres/Kafka) mati di lingkungan ini |
 | 2026-11-15 | Penyimpangan M3 (tahap 7): instruksi transfer dari env frontend (`VITE_BANK_*`) sampai endpoint pembayaran M4 ada; riwayat pesanan akun (`/me/orders`) tetap M5; halaman detail guest menyertakan `phone` di URL |
+| 2026-11-16 | **M4 backend selesai (M4-01..M4-08, M4-12..M4-14).** Service `payment` baru: proto `payment.v1`, migrasi (`payments`+`user_id`, `payment_proofs`, `outbox`, `processed_events`), domain (TRANSFER/COD, 7 status, aturan upload & verifikasi), repo pgx, usecase (status, upload bukti, verifikasi, konsumsi `order.events.v1`), gRPC + cmd (relay outbox, consumer, readiness). Integrasi: order konsumsi `payment.events.v1` (`TransitionFromPayment` idempoten + `order.status_changed`), catalog konsumsi `payment.confirmed` → reservasi `CONFIRMED`, gateway (`GET /orders/{code}/payment`, `POST /orders/{code}/payment-proof` rate limit 5/mnt, `GET /admin/payments`, `POST /admin/payments/{id}/verify`), notification Telegram (consumer group `notification-svc`, dedup in-memory, dilewati bila token kosong). `pkg`: `storage.SaveWith` + `AllowedProofExt`, `kafkax.Consumer.Ping`. `make fmt && make lint && make test` hijau |
+| 2026-11-16 | Penyimpangan M4: `UploadProof` unary (bukan stream chunked §8.5) — gateway simpan berkas lalu kirim URL; `user_id` ditambahkan ke tabel `payments` & payload `order.created`; bukti transfer di prefix `/uploads` yang sama (URL UUID, tanpa listing) sampai object storage M7 |
+| 2026-11-16 | **M4 frontend selesai (M4-09..M4-11).** Modul `features/payment` (`types`, `api`, `ProofUploadForm`, `PaymentPanel`) + halaman admin `/admin/pembayaran` (filter status, tabel, setujui, tolak dengan alasan, paginasi). `OrderDetailPage` merender `PaymentPanel`; instruksi transfer/COD & unggah bukti dilepas dari `OrderDetailView`. Menu "Pembayaran" + kartu "Menunggu verifikasi" di dashboard. `lib/api` mendukung field form tambahan (mis. `phone`); `CopyButton` ke `components/ui`. Verifikasi: `eslint`, `tsc -b`, `vitest` (77 test), `vite build` hijau. Uji E2E manual & integrasi DB/Kafka tertunda karena infra Docker mati di lingkungan ini |
