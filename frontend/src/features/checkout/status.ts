@@ -56,3 +56,24 @@ export function fulfillmentLabel(fulfillment: string): string {
 export function paymentLabel(method: string): string {
   return method === 'COD' ? 'Bayar di tempat (COD)' : 'Transfer bank'
 }
+
+/**
+ * Transisi status yang sah, selaras dengan backend domain/state.go.
+ * Dipakai panel admin agar pilihan status selalu legal.
+ */
+const TRANSITIONS: Record<string, string[]> = {
+  PENDING_PAYMENT: ['WAITING_VERIFICATION', 'PAID', 'CANCELLED', 'EXPIRED'],
+  WAITING_VERIFICATION: ['PAID', 'PENDING_PAYMENT', 'CANCELLED'],
+  PAID: ['PREPARING', 'CANCELLED'],
+  PREPARING: ['SHIPPED', 'READY_PICKUP', 'CANCELLED'],
+  SHIPPED: ['COMPLETED'],
+  READY_PICKUP: ['COMPLETED'],
+  COMPLETED: [],
+  CANCELLED: [],
+  EXPIRED: [],
+}
+
+/** allowedTransitions mengembalikan status tujuan yang sah dari status saat ini. */
+export function allowedTransitions(status: string): string[] {
+  return TRANSITIONS[status] ?? []
+}

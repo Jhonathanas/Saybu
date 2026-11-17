@@ -5,8 +5,10 @@ import { QtyPicker } from '@/features/catalog/QtyPicker'
 import { ProductImage } from '@/features/catalog/ProductImage'
 import { lineTotal, useCart } from '@/features/cart/store'
 import { formatIDR } from '@/lib/format'
+import { usePageTitle } from '@/lib/seo'
 
 export function CartPage() {
+  usePageTitle('Keranjang')
   const lines = useCart((s) => s.lines)
   const setQty = useCart((s) => s.setQty)
   const remove = useCart((s) => s.remove)

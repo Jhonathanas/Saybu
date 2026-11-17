@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isCancellable, isUnpaid, paymentLabel, statusLabel } from './status'
+import { allowedTransitions, isCancellable, isUnpaid, paymentLabel, statusLabel } from './status'
 
 describe('status', () => {
   it('menerjemahkan status ke label Indonesia', () => {
@@ -28,5 +28,17 @@ describe('status', () => {
   it('memberi label metode pembayaran', () => {
     expect(paymentLabel('COD')).toMatch(/COD/)
     expect(paymentLabel('TRANSFER')).toMatch(/Transfer/)
+  })
+
+  it('menyediakan transisi status yang sah (selaras backend)', () => {
+    expect(allowedTransitions('PENDING_PAYMENT')).toEqual([
+      'WAITING_VERIFICATION',
+      'PAID',
+      'CANCELLED',
+      'EXPIRED',
+    ])
+    expect(allowedTransitions('SHIPPED')).toEqual(['COMPLETED'])
+    expect(allowedTransitions('COMPLETED')).toEqual([])
+    expect(allowedTransitions('TIDAK_DIKENAL')).toEqual([])
   })
 })

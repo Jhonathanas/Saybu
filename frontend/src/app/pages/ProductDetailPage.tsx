@@ -9,6 +9,7 @@ import { ProductImage } from '@/features/catalog/ProductImage'
 import { getProduct } from '@/features/catalog/api'
 import { formatIDR, formatQty } from '@/lib/format'
 import { ApiError } from '@/lib/api'
+import { usePageTitle } from '@/lib/seo'
 
 export function ProductDetailPage() {
   const { slug = '' } = useParams()
@@ -22,6 +23,13 @@ export function ProductDetailPage() {
     queryFn: () => getProduct(slug),
     enabled: slug !== '',
   })
+
+  usePageTitle(
+    product?.name,
+    product
+      ? `${product.name} ${formatIDR(product.price)} / ${product.unit}. Pesan online di Saybu.`
+      : undefined,
+  )
 
   if (isLoading) return <Spinner label="Memuat produk…" />
   if (isError || !product) {

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router'
 import { z } from 'zod'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { usePageTitle } from '@/lib/seo'
 
 const schema = z.object({
   code: z.string().trim().min(1, 'Isi kode pesanan.'),
@@ -14,6 +15,7 @@ type FormValues = z.infer<typeof schema>
 
 /** OrderTrackingPage melacak pesanan dengan kode + nomor HP (guest). */
 export function OrderTrackingPage() {
+  usePageTitle('Lacak pesanan')
   const navigate = useNavigate()
   const {
     register,

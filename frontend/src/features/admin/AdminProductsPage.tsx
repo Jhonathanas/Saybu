@@ -17,6 +17,7 @@ import {
   uploadImage,
 } from '@/features/catalog/api'
 import { UNITS, type AdminProduct, type ProductInput, type Unit } from '@/features/catalog/types'
+import { usePageTitle } from '@/lib/seo'
 
 interface FormState {
   name: string
@@ -68,6 +69,7 @@ function toNumber(raw: string): number {
 }
 
 export function AdminProductsPage() {
+  usePageTitle('Produk · Admin')
   const queryClient = useQueryClient()
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)

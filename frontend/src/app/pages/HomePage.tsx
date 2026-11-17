@@ -5,9 +5,11 @@ import { Alert, Spinner } from '@/components/ui/Feedback'
 import { ProductCard } from '@/features/catalog/ProductCard'
 import { listCategories, listProducts } from '@/features/catalog/api'
 import { useAuth } from '@/features/auth/AuthProvider'
+import { usePageTitle } from '@/lib/seo'
 
 export function HomePage() {
   const { user } = useAuth()
+  usePageTitle(undefined, 'Belanja buah & sayur segar di Saybu. Antar ke rumah, bayar transfer atau COD.')
 
   const categories = useQuery({ queryKey: ['categories'], queryFn: listCategories })
   const featured = useQuery({

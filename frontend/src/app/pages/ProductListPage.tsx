@@ -9,6 +9,7 @@ import { ApiError } from '@/lib/api'
 import { ProductCard } from '@/features/catalog/ProductCard'
 import { listCategories, listProducts } from '@/features/catalog/api'
 import type { ProductSort } from '@/features/catalog/types'
+import { usePageTitle } from '@/lib/seo'
 
 const sortOptions = [
   { value: 'newest', label: 'Terbaru' },
@@ -22,6 +23,8 @@ export function ProductListPage() {
   const q = params.get('q') ?? ''
   const sort = (params.get('sort') as ProductSort | null) ?? 'newest'
   const page = Number(params.get('page') ?? '1') || 1
+
+  usePageTitle('Produk', 'Daftar buah dan sayur segar Saybu, dikirim dari pasar pagi ini.')
 
   const [search, setSearch] = useState(q)
   useEffect(() => setSearch(q), [q])

@@ -7,11 +7,13 @@ import { Alert, Spinner } from '@/components/ui/Feedback'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { PaymentPanel } from '@/features/payment/PaymentPanel'
 import { ApiError } from '@/lib/api'
+import { usePageTitle } from '@/lib/seo'
 import { cancelOrder, getOrder } from './api'
 import { OrderDetailView } from './OrderDetailView'
 import { isCancellable } from './status'
 
 export function OrderDetailPage() {
+  usePageTitle('Detail pesanan')
   const { code = '' } = useParams()
   const [searchParams] = useSearchParams()
   const phone = searchParams.get('phone') ?? undefined

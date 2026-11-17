@@ -7,6 +7,7 @@ import { Alert } from '@/components/ui/Feedback'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { ApiError } from '@/lib/api'
+import { usePageTitle } from '@/lib/seo'
 import { useAuth } from './AuthProvider'
 
 const phonePattern = /^08[0-9]{8,11}$/
@@ -35,6 +36,7 @@ const schema = z
 type FormValues = z.infer<typeof schema>
 
 export function RegisterPage() {
+  usePageTitle('Daftar', 'Buat akun Saybu untuk menyimpan riwayat pesanan.')
   const { register: registerUser } = useAuth()
   const navigate = useNavigate()
   const [formError, setFormError] = useState<string | null>(null)

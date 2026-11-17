@@ -1,5 +1,6 @@
 import { request, requestWithMeta } from '@/lib/api'
 import type {
+  AdminOrdersQuery,
   CreateOrderInput,
   ListOrdersMeta,
   Order,
@@ -50,6 +51,36 @@ export function cancelOrder(code: string, phone?: string, reason?: string): Prom
   return request<Order>(`/orders/${encodeURIComponent(code)}/cancel`, {
     method: 'POST',
     body: { phone: phone ?? '', reason: reason ?? '' },
+  })
+}
+
+// --- admin ---
+
+/** adminListOrders mengambil daftar pesanan dengan filter & paginasi (admin). */
+export function adminListOrders(
+  params: AdminOrdersQuery = {},
+): Promise<{ data: Order[]; meta?: ListOrdersMeta }> {
+  const query = new URLSearchParams()
+  if (params.status) query.set('status', params.status)
+  if (params.date_from) query.set('date_from', params.date_from)
+  if (params.date_to) query.set('date_to', params.date_to)
+  if (params.q) query.set('q', params.q)
+  if (params.page) query.set('page', String(params.page))
+  if (params.limit) query.set('limit', String(params.limit))
+  const suffix = query.toString() ? `?${query.toString()}` : ''
+  return requestWithMeta<Order[], ListOrdersMeta>(`/admin/orders${suffix}`)
+}
+
+/** adminGetOrder mengambil satu pesanan berdasarkan id (admin). */
+export function adminGetOrder(id: string): Promise<Order> {
+  return request<Order>(`/admin/orders/${encodeURIComponent(id)}`)
+}
+
+/** adminUpdateOrderStatus mengubah status pesanan (admin). 409 bila ilegal. */
+export function adminUpdateOrderStatus(id: string, status: string, note = ''): Promise<Order> {
+  return request<Order>(`/admin/orders/${encodeURIComponent(id)}/status`, {
+    method: 'PATCH',
+    body: { status, note },
   })
 }
 

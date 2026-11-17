@@ -99,3 +99,27 @@ export interface ListOrdersMeta {
   limit: number
   total: number
 }
+
+/** Status pesanan (selaras dengan backend domain/state.go). */
+export type OrderStatus =
+  | 'PENDING_PAYMENT'
+  | 'WAITING_VERIFICATION'
+  | 'PAID'
+  | 'PREPARING'
+  | 'SHIPPED'
+  | 'READY_PICKUP'
+  | 'COMPLETED'
+  | 'CANCELLED'
+  | 'EXPIRED'
+
+/** Filter daftar pesanan admin (GET /admin/orders). */
+export interface AdminOrdersQuery {
+  status?: string
+  /** YYYY-MM-DD, inklusif (zona Asia/Jakarta). */
+  date_from?: string
+  /** YYYY-MM-DD, inklusif. */
+  date_to?: string
+  q?: string
+  page?: number
+  limit?: number
+}

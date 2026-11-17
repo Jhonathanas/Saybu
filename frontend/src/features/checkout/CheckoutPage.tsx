@@ -12,6 +12,7 @@ import { useAuth } from '@/features/auth/AuthProvider'
 import { lineTotal, useCart } from '@/features/cart/store'
 import { ApiError } from '@/lib/api'
 import { formatIDR, formatQty } from '@/lib/format'
+import { usePageTitle } from '@/lib/seo'
 import { createOrder, getQuote, listZones, newIdempotencyKey } from './api'
 import type { CreateOrderInput, Fulfillment, PaymentMethod } from './types'
 
@@ -62,6 +63,7 @@ function describeError(err: ApiError): string {
 }
 
 export function CheckoutPage() {
+  usePageTitle('Checkout')
   const { user } = useAuth()
   const navigate = useNavigate()
   const lines = useCart((s) => s.lines)

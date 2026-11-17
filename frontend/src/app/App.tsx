@@ -5,6 +5,7 @@ import { AccountPage } from './pages/AccountPage'
 import { CartPage } from './pages/CartPage'
 import { HomePage } from './pages/HomePage'
 import { NotFoundPage } from './pages/NotFoundPage'
+import { ServerErrorPage } from './pages/ServerErrorPage'
 import { ProductDetailPage } from './pages/ProductDetailPage'
 import { ProductListPage } from './pages/ProductListPage'
 import { LoginPage } from '@/features/auth/LoginPage'
@@ -14,6 +15,8 @@ import { CheckoutPage } from '@/features/checkout/CheckoutPage'
 import { OrderDetailPage } from '@/features/checkout/OrderDetailPage'
 import { OrderTrackingPage } from '@/features/checkout/OrderTrackingPage'
 import { AdminDashboardPage } from '@/features/admin/AdminDashboardPage'
+import { AdminOrderDetailPage } from '@/features/admin/AdminOrderDetailPage'
+import { AdminOrdersPage } from '@/features/admin/AdminOrdersPage'
 import { AdminPaymentsPage } from '@/features/admin/AdminPaymentsPage'
 import { AdminProductsPage } from '@/features/admin/AdminProductsPage'
 import { AdminUsersPage } from '@/features/admin/AdminUsersPage'
@@ -40,6 +43,8 @@ export function App() {
       <Route path="admin" element={<RequireRole role="admin" />}>
         <Route element={<AdminLayout />}>
           <Route index element={<AdminDashboardPage />} />
+          <Route path="pesanan" element={<AdminOrdersPage />} />
+          <Route path="pesanan/:id" element={<AdminOrderDetailPage />} />
           <Route path="produk" element={<AdminProductsPage />} />
           <Route path="pembayaran" element={<AdminPaymentsPage />} />
           <Route path="pengguna" element={<AdminUsersPage />} />
@@ -48,6 +53,7 @@ export function App() {
 
       <Route path="login" element={<Navigate to="/masuk" replace />} />
       <Route path="register" element={<Navigate to="/daftar" replace />} />
+      <Route path="500" element={<ServerErrorPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )

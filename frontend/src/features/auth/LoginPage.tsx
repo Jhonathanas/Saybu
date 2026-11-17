@@ -7,6 +7,7 @@ import { Alert } from '@/components/ui/Feedback'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { ApiError } from '@/lib/api'
+import { usePageTitle } from '@/lib/seo'
 import { useAuth } from './AuthProvider'
 
 const schema = z.object({
@@ -17,6 +18,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>
 
 export function LoginPage() {
+  usePageTitle('Masuk', 'Masuk ke akun Saybu untuk melacak pesanan Anda.')
   const { login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()

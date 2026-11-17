@@ -13,6 +13,7 @@ import {
   paymentStatusLabel,
   type AdminPayment,
 } from '@/features/payment/types'
+import { usePageTitle } from '@/lib/seo'
 
 const STATUS_OPTIONS = [
   { value: 'WAITING_VERIFICATION', label: 'Menunggu verifikasi' },
@@ -27,6 +28,7 @@ const STATUS_OPTIONS = [
 
 /** AdminPaymentsPage memverifikasi bukti transfer dan memantau pembayaran. */
 export function AdminPaymentsPage() {
+  usePageTitle('Pembayaran · Admin')
   const queryClient = useQueryClient()
   const [status, setStatus] = useState('WAITING_VERIFICATION')
   const [page, setPage] = useState(1)

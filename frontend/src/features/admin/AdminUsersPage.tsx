@@ -6,8 +6,10 @@ import { Input } from '@/components/ui/Input'
 import { ApiError } from '@/lib/api'
 import { formatDateTime } from '@/lib/format'
 import { listUsers } from '@/features/auth/api'
+import { usePageTitle } from '@/lib/seo'
 
 export function AdminUsersPage() {
+  usePageTitle('Pengguna · Admin')
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
 

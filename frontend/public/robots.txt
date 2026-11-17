@@ -1,0 +1,10 @@
+# Saybu — aturan crawler.
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /akun
+Disallow: /keranjang
+Disallow: /checkout
+Disallow: /api
+
+Sitemap: https://saybu.example/sitemap.xml
