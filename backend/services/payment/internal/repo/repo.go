@@ -196,13 +196,9 @@ func (r *Repo) AttachProof(ctx context.Context, paymentID string, proof domain.P
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO payment_proofs (id, payment_id, url, size_bytes, content_type, uploaded_by)
-		VALUES ($1, $2, $3, $4, $5, $6)
-	`, proof.ID, paymentID, proof.URL, proof.SizeBytes, proof.ContentType, proof.UploadedBy); err != nil {
-		return domain.Payment{}, fmt.Errorf("repo: insert proof: %w", err)
-	}
-
+	// Validasi status lebih dulu (kunci baris pembayaran) agar unggahan yang
+	// tidak diizinkan tidak menyisakan baris bukti, dan error domain tidak
+	// tertutup oleh error basis data (mis. id bukti duplikat).
 	tag, err := tx.Exec(ctx, `
 		UPDATE payments SET
 			proof_url = $2,
@@ -217,6 +213,13 @@ func (r *Repo) AttachProof(ctx context.Context, paymentID string, proof domain.P
 	}
 	if tag.RowsAffected() == 0 {
 		return domain.Payment{}, domain.ErrProofNotAllowed
+	}
+
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO payment_proofs (id, payment_id, url, size_bytes, content_type, uploaded_by)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`, proof.ID, paymentID, proof.URL, proof.SizeBytes, proof.ContentType, proof.UploadedBy); err != nil {
+		return domain.Payment{}, fmt.Errorf("repo: insert proof: %w", err)
 	}
 
 	p, err := scanPayment(tx.QueryRow(ctx, `SELECT `+paymentColumns+` FROM payments p WHERE p.id = $1`, paymentID))
