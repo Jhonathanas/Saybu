@@ -137,7 +137,7 @@
 |---|---|---|---|---|
 | `order.events.v1` | `order_id` | order | catalog, payment, notification | `order.created`, `order.cancelled`, `order.status_changed`, `order.expired` |
 | `payment.events.v1` | `order_id` | payment | order, notification | `payment.proof_uploaded`, `payment.confirmed`, `payment.rejected` |
-| `catalog.events.v1` | `product_id` | catalog | notification | `product.updated`, `stock.low`, `stock.released` |
+| `catalog.events.v1` | `product_id` | catalog | notification | `product.updated`, `stock.low` (saat checkout menembus ambang), `stock.released` |
 | `notification.commands.v1` | `recipient_key` | service mana pun | notification | perintah kirim pesan (Telegram) |
 | `<topic>.dlq` | sama | consumer | — | pesan gagal permanen |
 
@@ -174,8 +174,8 @@ Aturan evolusi: **hanya aditif**. Field tidak boleh dihapus/diubah tipe. Perubah
 // payment.confirmed
 { "payment_id": "...", "order_id": "...", "amount": 85000, "verified_by": "admin-uuid" }
 
-// stock.low
-{ "product_id": "...", "name": "Tomat", "remaining": 3, "unit": "kg" }
+// stock.low — dipancarkan saat stok melewati ambang (sekali per pelanggaran)
+{ "product_id": "...", "name": "Tomat", "remaining": 3, "unit": "kg", "threshold": 5 }
 ```
 
 ---
@@ -230,7 +230,7 @@ Client ──POST /orders──► gateway ──gRPC──► order
 | Status | Arti | Transisi berikutnya |
 |---|---|---|
 | `PENDING_PAYMENT` | dibuat, belum dibayar | `WAITING_VERIFICATION`, `PAID` (COD), `CANCELLED`, `EXPIRED` |
-| `WAITING_VERIFICATION` | bukti transfer diunggah | `PAID`, `PENDING_PAYMENT` (ditolak) |
+| `WAITING_VERIFICATION` | bukti transfer diunggah | `PAID`, `PENDING_PAYMENT` (ditolak), `CANCELLED` |
 | `PAID` | pembayaran sah | `PREPARING`, `CANCELLED` |
 | `PREPARING` | sedang disiapkan | `SHIPPED`, `READY_PICKUP`, `CANCELLED` |
 | `SHIPPED` | sedang diantar | `COMPLETED` |
@@ -240,6 +240,12 @@ Client ──POST /orders──► gateway ──gRPC──► order
 | `EXPIRED` | kedaluwarsa 24 jam | — |
 
 Transisi divalidasi di domain `order`; yang ilegal → `FAILED_PRECONDITION` → HTTP 409.
+
+- Pembeli boleh membatalkan selama `PENDING_PAYMENT` / `WAITING_VERIFICATION` / `PAID` (stok dilepas).
+- Admin boleh mengubah status lewat `PATCH /admin/orders/{id}/status` (transisi tervalidasi, tercatat di
+  `order_status_history` dan memancarkan `order.status_changed`).
+- COD: pembayaran dimulai `COD_PENDING`; saat pesanan `COMPLETED`, payment menandai `COD_PAID` dari
+  event `order.status_changed` (M5-06).
 
 ### 7.3 Efek event
 
@@ -251,6 +257,8 @@ Transisi divalidasi di domain `order`; yang ilegal → `FAILED_PRECONDITION` →
 | `payment.proof_uploaded` | `WAITING_VERIFICATION` | — | — | Telegram |
 | `payment.confirmed` | `PAID` | kurangi stok permanen* | — | Telegram ke pembeli & admin |
 | `payment.rejected` | `PENDING_PAYMENT` | — | — | Telegram |
+| `order.status_changed` | — | — | COD → `COD_PAID` saat `COMPLETED` | Telegram |
+| `stock.low` | — | — | — | Telegram ke admin |
 
 \* Reservasi sudah mengurangi stok tersedia saat checkout; `payment.confirmed` mengonversi reservasi menjadi pemakaian final. Bila pesanan batal/expired, reservasi dilepas.
 
@@ -305,6 +313,10 @@ Transisi divalidasi di domain `order`; yang ilegal → `FAILED_PRECONDITION` →
 - `/healthz` (liveness, tanpa dependensi) dan `/readyz` (cek DB/Kafka).
 - `/metrics` Prometheus per service: `http_requests_total`, `grpc_server_handling_seconds`, `kafka_consumer_lag`, `outbox_lag_seconds`, `orders_created_total`.
 - Grafana + Prometheus dijalankan opsional di compose (profil `observability`).
+- **Audit admin (M5):** middleware di gateway mencatat setiap mutasi admin yang berhasil
+  (POST/PATCH/DELETE di bawah `/admin`) sebagai log terstruktur: `actor`, `action`, `path`, `status`,
+  `request_id`. Tabel `audit_logs` persisten ditunda (lihat §15). Perubahan status pesanan tetap
+  tersimpan di `order_status_history`.
 
 ---
 
@@ -349,4 +361,4 @@ Transisi divalidasi di domain `order`; yang ilegal → `FAILED_PRECONDITION` →
 - **Read model laporan**: consumer membangun tabel agregat harian.
 - **gRPC-Web / Connect**: bila ingin menghapus gateway REST.
 - **Redpanda**: pengganti Kafka hemat RAM, API kompatibel.
-- **Multi-admin & audit log**: tabel `audit_log` + role granular.
+- **Multi-admin & audit log persisten**: tabel `audit_logs` + role granular (M5 baru mencatat audit mutasi admin sebagai log terstruktur di gateway).

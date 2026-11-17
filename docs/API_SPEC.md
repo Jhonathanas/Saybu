@@ -438,7 +438,9 @@ objek produk admin di §7.1.
 
 ### 7.7 `GET /admin/orders`
 
-Query: `status`, `date_from`, `date_to`, `q`, `page`, `limit`.
+Query: `status`, `date_from`, `date_to`, `q`, `page`, `limit`. Respons berhalaman (`data` + `meta`).
+
+`GET /admin/orders/{id}` mengembalikan satu pesanan (bentuk sama dengan §5.2) untuk panel admin.
 
 ### 7.8 `PATCH /admin/orders/{id}/status`
 
@@ -530,16 +532,17 @@ service OrderService {
   rpc CreateOrder(CreateOrderRequest) returns (Order);
   rpc GetOrderByCode(GetOrderByCodeRequest) returns (Order);
   rpc ListMyOrders(ListMyOrdersRequest) returns (ListOrdersResponse);
+  rpc GetOrderByID(GetOrderByIDRequest) returns (Order);           // admin (M5)
   rpc ListOrders(ListOrdersRequest) returns (ListOrdersResponse); // admin (M5)
   rpc UpdateStatus(UpdateStatusRequest) returns (Order);           // admin (M5)
   rpc CancelOrder(CancelOrderRequest) returns (Order);
-  rpc GetTodayStats(google.protobuf.Empty) returns (TodayStats);   // admin (M5)
+  rpc GetTodayStats(GetTodayStatsRequest) returns (TodayStats);   // admin (M5)
 }
 ```
 
 > **M3:** proto hanya mengimplementasikan `CreateOrder`, `GetOrderByCode`, `ListMyOrders`, dan `CancelOrder`.
-> RPC admin `ListOrders`/`UpdateStatus`/`GetTodayStats` ditunda ke M5. Job penandaan pesanan kedaluwarsa
-> berjalan lewat ticker internal service order (tanpa RPC).
+> RPC admin `GetOrderByID`/`ListOrders`/`UpdateStatus`/`GetTodayStats` ditambahkan pada M5. Job penandaan
+> pesanan kedaluwarsa berjalan lewat ticker internal service order (tanpa RPC).
 
 ### 8.5 `payment.v1.PaymentService`
 
@@ -632,7 +635,9 @@ Semua event ditulis lewat outbox pada transaksi yang sama (AGENTS.md §3.4).
 // product.updated — create/update/soft-delete produk
 { "product_id": "...", "name": "Tomat", "slug": "tomat-merah", "price": 12000, "unit": "kg", "is_active": true }
 
-// stock.low — hanya saat stok melewati (turun di bawah) low_stock_threshold
+// stock.low — dipancarkan saat stok melewati (turun ke) low_stock_threshold.
+// Ditulis lewat outbox pada transaksi yang sama dengan pengurangan stok (M5),
+// sehingga terkirim sekali per pelanggaran ambang. remaining dalam satuan terkecil.
 { "product_id": "...", "name": "Tomat", "remaining": 3, "unit": "kg", "threshold": 5 }
 
 // stock.released — direncanakan M3 (saat pelepasan reservasi pesanan)

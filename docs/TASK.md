@@ -263,18 +263,36 @@
 
 | ID | Task | Acceptance | Est |
 |---|---|---|---|
-| M5-01 | `[ ]` Riwayat pesanan untuk akun (`/me/orders`) | Hanya pesanan sendiri | 1 j |
-| M5-02 | `[ ]` Admin: daftar & detail pesanan + filter status/tanggal/cari | Filter akurat | 1.5 j |
-| M5-03 | `[ ]` Admin: ubah status dari UI dengan validasi | Transisi ilegal ditolak | 1 j |
-| M5-04 | `[ ]` Admin: dashboard ringkasan hari ini | Angka sesuai DB | 1 j |
-| M5-05 | `[ ]` Pembatalan oleh pembeli + konfirmasi | Stok dilepas | 1 j |
-| M5-06 | `[ ]` COD: tandai lunas saat selesai | Status pembayaran COD benar | 0.5 j |
-| M5-07 | `[ ]` Notifikasi stok menipis ke admin | Event `stock.low` terkirim sekali per ambang | 1 j |
-| M5-08 | `[ ]` Halaman 404/500 + error boundary frontend | Tidak blank screen | 0.5 j |
-| M5-09 | `[ ]` Empty states & loading skeleton | UX rapi | 0.5 j |
-| M5-10 | `[ ]` SEO dasar: title, meta, OG image, sitemap | Terbaca crawler | 0.5 j |
-| M5-11 | `[ ]` Audit log admin sederhana | Perubahan tercatat | 1 j |
+| M5-01 | `[x]` Riwayat pesanan untuk akun (`/me/orders`) | Hanya pesanan sendiri | 1 j |
+| M5-02 | `[x]` Admin: daftar & detail pesanan + filter status/tanggal/cari | Filter akurat | 1.5 j |
+| M5-03 | `[x]` Admin: ubah status dari UI dengan validasi | Transisi ilegal ditolak | 1 j |
+| M5-04 | `[x]` Admin: dashboard ringkasan hari ini | Angka sesuai DB | 1 j |
+| M5-05 | `[x]` Pembatalan oleh pembeli + konfirmasi | Stok dilepas | 1 j |
+| M5-06 | `[x]` COD: tandai lunas saat selesai | Status pembayaran COD benar | 0.5 j |
+| M5-07 | `[x]` Notifikasi stok menipis ke admin | Event `stock.low` terkirim sekali per ambang | 1 j |
+| M5-08 | `[x]` Halaman 404/500 + error boundary frontend | Tidak blank screen | 0.5 j |
+| M5-09 | `[x]` Empty states & loading skeleton | UX rapi | 0.5 j |
+| M5-10 | `[x]` SEO dasar: title, meta, OG image, sitemap | Terbaca crawler | 0.5 j |
+| M5-11 | `[x]` Audit log admin sederhana | Perubahan tercatat | 1 j |
 | M5-12 | `[ ]` Uji usability panel dengan orangtua | Ada catatan perbaikan | 1 j |
+
+**Catatan M5:**
+- **Backend** (commit `b364eaf`): RPC admin `order.v1` (`GetOrderByID`, `ListOrders`, `UpdateStatus`,
+  `GetTodayStats`), `catalog.ListLowStock`, gateway `/admin/orders` (+detail, ubah status),
+  `/admin/stats/today`, audit middleware, payment `order.status_changed` → COD `COD_PAID`, notification
+  topik `catalog.events.v1` + pesan `stock.low`.
+- **Definisi statistik:** `orders_count` = pesanan dibuat hari ini (Asia/Jakarta); `revenue_paid` = jumlah
+  `total` pesanan hari ini berstatus `PAID`/`PREPARING`/`SHIPPED`/`READY_PICKUP`/`COMPLETED`;
+  `awaiting_verification` = jumlah pesanan berstatus `WAITING_VERIFICATION` saat ini (backlog, bukan
+  hanya hari ini).
+- **`low_stock`** digabung di gateway dari `catalog.ListLowStock` (satu DB per service dijaga); bila
+  panggilan katalog gagal, daftar kosong + log peringatan (ringkasan tetap tampil).
+- **Audit log** saat ini berupa log terstruktur di gateway (bukan tabel). `audit_logs` persisten ditunda
+  ke fase lanjut; perubahan status pesanan tetap tercatat di `order_status_history`.
+- **`stock.low`** ditulis lewat outbox pada transaksi `ReserveStock` saat checkout menembus ambang
+  (sekali per pelanggaran ambang), juga tetap dipancarkan dari jalur update stok produk.
+- **SEO/OG:** `og-image.svg` & `favicon.svg` adalah placeholder SVG; ganti OG image raster + domain
+  absolut saat deploy (M7).
 
 **Gate M5:** seluruh alur bisnis v1 lengkap dan bisa dipakai sehari-hari.
 
@@ -362,3 +380,6 @@
 | 2026-11-16 | **M4 backend selesai (M4-01..M4-08, M4-12..M4-14).** Service `payment` baru: proto `payment.v1`, migrasi (`payments`+`user_id`, `payment_proofs`, `outbox`, `processed_events`), domain (TRANSFER/COD, 7 status, aturan upload & verifikasi), repo pgx, usecase (status, upload bukti, verifikasi, konsumsi `order.events.v1`), gRPC + cmd (relay outbox, consumer, readiness). Integrasi: order konsumsi `payment.events.v1` (`TransitionFromPayment` idempoten + `order.status_changed`), catalog konsumsi `payment.confirmed` → reservasi `CONFIRMED`, gateway (`GET /orders/{code}/payment`, `POST /orders/{code}/payment-proof` rate limit 5/mnt, `GET /admin/payments`, `POST /admin/payments/{id}/verify`), notification Telegram (consumer group `notification-svc`, dedup in-memory, dilewati bila token kosong). `pkg`: `storage.SaveWith` + `AllowedProofExt`, `kafkax.Consumer.Ping`. `make fmt && make lint && make test` hijau |
 | 2026-11-16 | Penyimpangan M4: `UploadProof` unary (bukan stream chunked §8.5) — gateway simpan berkas lalu kirim URL; `user_id` ditambahkan ke tabel `payments` & payload `order.created`; bukti transfer di prefix `/uploads` yang sama (URL UUID, tanpa listing) sampai object storage M7 |
 | 2026-11-16 | **M4 frontend selesai (M4-09..M4-11).** Modul `features/payment` (`types`, `api`, `ProofUploadForm`, `PaymentPanel`) + halaman admin `/admin/pembayaran` (filter status, tabel, setujui, tolak dengan alasan, paginasi). `OrderDetailPage` merender `PaymentPanel`; instruksi transfer/COD & unggah bukti dilepas dari `OrderDetailView`. Menu "Pembayaran" + kartu "Menunggu verifikasi" di dashboard. `lib/api` mendukung field form tambahan (mis. `phone`); `CopyButton` ke `components/ui`. Verifikasi: `eslint`, `tsc -b`, `vitest` (77 test), `vite build` hijau. Uji E2E manual & integrasi DB/Kafka tertunda karena infra Docker mati di lingkungan ini |
+| 2026-11-17 | **M5 backend selesai (M5-02..M5-07, M5-11).** `order.v1`: RPC `GetOrderByID`/`ListOrders`/`UpdateStatus`/`GetTodayStats` + domain filter & statistik. `catalog`: `ListLowStock`, dan `ReserveStock` memancarkan `stock.low` lewat outbox saat checkout menembus ambang. Gateway: `/admin/orders` (+`{id}`, `{id}/status`), `/admin/stats/today` (menggabungkan `low_stock` dari katalog), middleware audit mutasi admin. `payment`: konsumsi `order.status_changed` → COD `COD_PAID` saat `COMPLETED`. `notification`: topik `catalog.events.v1` + pesan `stock.low`. `make fmt && make lint && make test` hijau |
+| 2026-11-17 | **M5 frontend selesai (M5-01..M5-05, M5-08..M5-10).** Modul `features/admin` (`api`/`types`, `AdminOrdersPage`, `AdminOrderDetailPage`, `AdminDashboardPage` dengan `low_stock`), riwayat pesanan di `AccountPage`, `ErrorBoundary` + `/500` + 404, `usePageTitle` di seluruh halaman, `robots.txt`/`sitemap.xml`/OG & favicon SVG. `allowedTransitions` di `features/checkout/status`. Verifikasi: `eslint`, `tsc -b`, `vitest` (88 test), `vite build` hijau |
+| 2026-11-17 | Penyimpangan M5: audit log masih log terstruktur gateway (tabel `audit_logs` ditunda); `low_stock` digabung di gateway (satu DB per service dijaga); OG image & favicon berupa SVG placeholder (raster + domain absolut saat M7). Uji E2E manual & integrasi DB/Kafka masih tertunda karena infra Docker mati di lingkungan ini |
