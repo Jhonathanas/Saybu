@@ -34,7 +34,7 @@
 | Router HTTP | `github.com/go-chi/chi/v5` | Ringan, idiomatik, middleware jelas |
 | gRPC | `google.golang.org/grpc` | Standar |
 | Protobuf codegen | `buf` + `protoc-gen-go`, `protoc-gen-go-grpc` | Tooling modern, lint & breaking check |
-| Kafka | `github.com/twmb/franz-go` | Pure Go, cepat, idempotent producer, consumer group matang |
+| Kafka | `github.com/twmb/franz-go` (+ `pkg/kadm` untuk lag consumer group) | Pure Go, cepat, idempotent producer, consumer group matang |
 | Postgres driver | `github.com/jackc/pgx/v5` | Performa & fitur terbaik |
 | Query codegen | `sqlc` | SQL eksplisit, type-safe |
 | Migrasi | `github.com/pressly/goose/v3` | Sederhana, bisa embed |
@@ -251,6 +251,11 @@ VITE_BANK_HOLDER="Saybu Buah & Sayur"
 | `make lint` | `go vet` + golangci-lint (bila ada) |
 | `make fmt` | `gofmt -w` |
 | `make build` | Build semua binary ke `backend/bin` |
+| `make observability` | Jalankan Prometheus + Grafana (profil `observability`) |
+| `make observability-down` | Hentikan Prometheus + Grafana |
+| `make load-test` | Load test k6 via Docker (100 VU katalog + 10 checkout/detik) |
+| `make backup` | Backup semua DB ke `backups/<timestamp>` |
+| `make restore DIR=...` | Restore semua DB dari hasil `make backup` |
 | `make clean` | Hapus binary & volume container |
 
 ---
@@ -271,6 +276,8 @@ VITE_BANK_HOLDER="Saybu Buah & Sayur"
 | Kafka host | 29092 |
 | Kafka internal | 9092 |
 | Kafka UI | 8090 |
+| Prometheus | 9090 |
+| Grafana | 3000 |
 | Mailpit | 8025 |
 
 ---
@@ -289,6 +296,8 @@ make dev-frontend       # terminal lain
 
 Buka `http://localhost:5173` (toko) dan `http://localhost:5173/admin` (panel).
 Kafka UI: `http://localhost:8090`. Health service: `:8081`, `:9101`–`:9105`, `:8086`.
+Observability (opsional): `make observability` → Prometheus `http://localhost:9090`, Grafana
+`http://localhost:3000` (`admin`/`admin`).
 
 ---
 

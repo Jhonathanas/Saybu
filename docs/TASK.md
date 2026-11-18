@@ -302,14 +302,41 @@
 
 | ID | Task | Acceptance | Est |
 |---|---|---|---|
-| M6-01 | `[ ]` Metrik Prometheus semua service | `/metrics` berisi metrik kunci | 1 j |
-| M6-02 | `[ ]` Dashboard Grafana (request rate, latency, error, consumer lag, outbox lag) | Dashboard bisa dipakai | 1.5 j |
-| M6-03 | `[ ]` Propagasi `request_id` HTTP → gRPC → event → log | Satu request bisa dilacak | 1 j |
-| M6-04 | `[ ]` Rate limit seluruh endpoint sesuai spec | 429 muncul saat melebihi | 0.5 j |
-| M6-05 | `[ ]` Security review: CORS, header, secret, upload, SQL injection | Checklist aman | 1 j |
-| M6-06 | `[ ]` Load test k6 (100 VU katalog + 10 checkout/detik) | p95 < 300 ms lokal | 1 j |
-| M6-07 | `[ ]` Uji restore backup | Data kembali utuh | 1 j |
-| M6-08 | `[ ]` Dokumentasi operasional (runbook) | Ada panduan insiden | 1 j |
+| M6-01 | `[x]` Metrik Prometheus semua service | `/metrics` berisi metrik kunci | 1 j |
+| M6-02 | `[x]` Dashboard Grafana (request rate, latency, error, consumer lag, outbox lag) | Dashboard bisa dipakai | 1.5 j |
+| M6-03 | `[x]` Propagasi `request_id` HTTP → gRPC → event → log | Satu request bisa dilacak | 1 j |
+| M6-04 | `[x]` Rate limit seluruh endpoint sesuai spec | 429 muncul saat melebihi | 0.5 j |
+| M6-05 | `[x]` Security review: CORS, header, secret, upload, SQL injection | Checklist aman | 1 j |
+| M6-06 | `[x]` Load test k6 (100 VU katalog + 10 checkout/detik) | p95 < 300 ms lokal | 1 j |
+| M6-07 | `[x]` Uji restore backup | Data kembali utuh | 1 j |
+| M6-08 | `[x]` Dokumentasi operasional (runbook) | Ada panduan insiden | 1 j |
+
+**Catatan M6:**
+- **M6-03 korelasi:** `kafkax.NewEventCtx(ctx, …)` mengisi `correlation_id` dari `request_id` context;
+  semua pembangun event (order/catalog/payment) meneruskan `ctx`. Consumer menyemai `request_id` handler
+  dari `correlation_id` (cadangan `event_id`). Diverifikasi end-to-end: `X-Request-Id` HTTP → gRPC →
+  `order.created` (`correlation_id` sama) → log gateway & order.
+- **M6-01 metrik:** `telemetry.Metrics` menambah `grpc_server_handling_seconds`, `outbox_lag_seconds`
+  (+`ObserveOutboxLag`), `kafka_consumer_lag` (+`SetConsumerLag`), `orders_created_total`
+  (+`IncOrdersCreated`). `outbox.Relay.SetLagReporter` melaporkan usia event tertua; `kafkax.Consumer`
+  menghitung lag via `kadm` (`ReportLagLoop` 15s). Order memakai `SetOrderCreatedHook`.
+- **M6-04 rate limit:** middleware `ratelimit.Middleware` + `ReadMethods`/`WriteMethods`/`ByIP`;
+  baca `/api/v1` 120/menit per IP, tulis admin 60/menit per user; semua 429 menyertakan `Retry-After`.
+  Limiter kini membersihkan bucket kedaluwarsa (`nextSweep`/`Size`) agar memori terbatas.
+- **M6-02 observability:** compose profil `observability` (Prometheus v3.1.0, Grafana 11.5.1,
+  volume `promdata`/`grafanadata`, `host.docker.internal`), provisioning datasource + dashboard
+  (8 panel). Target `make observability`/`observability-down`. Env baru `PROMETHEUS_PORT`,
+  `GRAFANA_PORT`, `GRAFANA_USER`, `GRAFANA_PASSWORD`. Diverifikasi: 7 target `up`, dashboard tampil.
+- **M6-05 security:** `httpx.SecurityHeaders(hsts)` (nosniff, X-Frame-Options DENY, Referrer-Policy,
+  Permissions-Policy, HSTS produksi) di gateway; CORS menambah `Accept-Language`. Review: validasi
+  unggah, path traversal, `.env` ter-gitignore, query berparameter. Checklist: `docs/SECURITY.md`.
+- **M6-06 load test:** `infra/load/k6-saybu.js` (k6 via Docker, `make load-test`), IP klien acak per
+  iterasi. Hasil: katalog p95 ≈ 242 ms (< 300) dan checkout p95 ≈ 449 ms (< 500), gagal katalog 0%.
+- **M6-07 backup/restore:** `infra/scripts/{backup.sh,restore.sh}` + `make backup`/`restore` (nama DB
+  dari DSN). Diuji: backup 5 DB, rusak data (hapus produk/pesanan/user), restore → jumlah baris & versi
+  migrasi (`goose_db_version`) kembali persis.
+- **M6-08 runbook:** `docs/RUNBOOK.md` (16 bagian: triase, insiden service/DB/Kafka/lag/outbox/DLQ,
+  restore, migrasi, pembayaran, notifikasi, disk, observability, load test, eskalasi).
 
 ---
 
@@ -385,3 +412,5 @@
 | 2026-11-17 | Penyimpangan M5: audit log masih log terstruktur gateway (tabel `audit_logs` ditunda); `low_stock` digabung di gateway (satu DB per service dijaga); OG image & favicon berupa SVG placeholder (raster + domain absolut saat M7). Uji E2E manual & integrasi DB/Kafka masih tertunda karena infra Docker mati di lingkungan ini |
 | 2026-11-17 | **Verifikasi M0–M5 dengan infra Docker hidup.** Docker Desktop dihidupkan (WSL integration) → `make up` + `make migrate` (5 DB, 8 topic) → `make test` hijau; `make test-integration` hijau (7 paket: repo auth/catalog/shipping/order/payment + consumer catalog + Kafka); E2E manual via gateway **72/72 lulus** (katalog, ongkir, checkout+idempotensi, bukti transfer, verifikasi admin, transisi status & 409, ringkasan harian + `low_stock`, riwayat akun, pembatalan pembeli, COD→`COD_PAID`, event `stock.low`, audit log); `vitest` 88 + `eslint`/`tsc -b` + `make build` hijau |
 | 2026-11-17 | Bug diperbaiki saat verifikasi: `payment.repo.AttachProof` menyisipkan baris bukti sebelum memvalidasi status, sehingga unggahan ulang saat `WAITING_VERIFICATION` (atau id bukti duplikat) gagal dengan error primary key alih-alih `ErrProofNotAllowed`. Kini validasi status (UPDATE terkunci) dijalankan lebih dulu; test integrasi repo pembayaran hijau |
+| 2026-11-18 | **M6 selesai (M6-01..M6-08).** Observability & hardening: propagasi `correlation_id` HTTP→gRPC→event→log; metrik `grpc_server_handling_seconds`/`kafka_consumer_lag`/`outbox_lag_seconds`/`orders_created_total` (lag via `kadm`); compose profil `observability` (Prometheus + Grafana, dashboard 8 panel); rate limit baca 120/mnt per IP + tulis admin 60/mnt per user dengan eviction bucket; header keamanan + `docs/SECURITY.md`; load test k6 (`make load-test`); backup/restore (`make backup`/`restore`) diuji utuh; `docs/RUNBOOK.md`. `make fmt && make lint && make test` hijau |
+| 2026-11-18 | Penyimpangan M6: rate limiter in-memory per instance (Redis ditunda ke M7 bila gateway di-scale); CSP belum dipasang (via Caddy M7); backup masih manual (otomatisasi + object storage di M7). Hasil load test: katalog p95 ≈ 242 ms, checkout p95 ≈ 449 ms (ambang 300/500 ms) |

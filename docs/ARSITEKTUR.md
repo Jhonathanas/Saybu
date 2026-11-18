@@ -289,12 +289,19 @@ Transisi divalidasi di domain `order`; yang ilegal → `FAILED_PRECONDITION` →
 - Password: **argon2id** (memory 64 MB, iterations 3, parallelism 2).
 - JWT: akses 15 menit (HS256, secret dari env), refresh 30 hari disimpan **hash**-nya, rotasi setiap refresh, deteksi reuse → cabut semua sesi user.
 - Gateway memvalidasi JWT & role; service internal percaya metadata dari gateway (jaringan privat).
-- Rate limit: login 5/menit per IP+email, endpoint tulis 30/menit per user/IP.
+- Rate limit (detail `API_SPEC.md` §10): login 5/menit per IP+identifier, register 3/menit per IP,
+  checkout 10/menit per IP, unggah bukti 5/menit per IP, tulis admin 60/menit per user, baca 120/menit
+  per IP. Respons 429 menyertakan `Retry-After`; bucket kedaluwarsa dibersihkan berkala.
+- Header keamanan di gateway (`httpx.SecurityHeaders`): `X-Content-Type-Options: nosniff`,
+  `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`,
+  `Permissions-Policy`, dan `Strict-Transport-Security` (hanya di produksi).
 - Validasi input di gateway (bentuk) dan service (bisnis).
 - Upload: whitelist `image/jpeg`, `image/png`, `application/pdf`; maks 5 MB; nama file di-generate; tidak dieksekusi.
 - CORS hanya origin frontend.
 - Secret tidak pernah masuk repo; `.env` di-gitignore.
 - Log tidak boleh memuat password, token, atau isi bukti transfer.
+
+Checklist lengkap & tindak lanjut: `docs/SECURITY.md`.
 
 ---
 
@@ -311,12 +318,30 @@ Transisi divalidasi di domain `order`; yang ilegal → `FAILED_PRECONDITION` →
 
 - Log JSON (`slog`) dengan field: `time`, `level`, `service`, `request_id`, `user_id`, `method`, `path`, `status`, `duration_ms`, `error`.
 - `/healthz` (liveness, tanpa dependensi) dan `/readyz` (cek DB/Kafka).
-- `/metrics` Prometheus per service: `http_requests_total`, `grpc_server_handling_seconds`, `kafka_consumer_lag`, `outbox_lag_seconds`, `orders_created_total`.
-- Grafana + Prometheus dijalankan opsional di compose (profil `observability`).
+- **Korelasi request (M6-03):** `request_id` dibuat/diambil di gateway (`X-Request-Id`), diteruskan ke
+  gRPC lewat metadata, dan disimpan sebagai `correlation_id` pada setiap event Kafka
+  (`kafkax.NewEventCtx`). Consumer menyemai `request_id` handler dari `correlation_id`
+  (cadangan: `event_id`), sehingga satu request dapat dilacak HTTP → gRPC → event → log.
+- `/metrics` Prometheus per service. Metrik kunci:
+  | Metrik | Tipe | Arti |
+  |---|---|---|
+  | `saybu_<svc>_http_requests_total` | counter | Jumlah request HTTP per method/path/status |
+  | `saybu_<svc>_http_request_duration_seconds` | histogram | Latensi HTTP |
+  | `saybu_<svc>_grpc_requests_total` | counter | Jumlah request gRPC per method/code |
+  | `saybu_<svc>_grpc_server_handling_seconds` | histogram | Latensi penanganan gRPC |
+  | `saybu_<svc>_kafka_consumer_lag` | gauge | Lag consumer group per topic (via `kadm`) |
+  | `saybu_<svc>_outbox_lag_seconds` | gauge | Usia event outbox tertua yang belum terkirim |
+  | `saybu_<svc>_orders_created_total` | counter | Pesanan berhasil dibuat |
+- Grafana + Prometheus dijalankan opsional di compose (profil `observability`, `make observability`).
+  Prometheus men-scrape gateway `:8081` dan admin `:9101`–`:9105` serta notification `:8086` lewat
+  `host.docker.internal`. Dashboard ter-provision: `infra/observability/grafana/dashboards/saybu.json`
+  (8 panel: HTTP rate/p95/5xx, gRPC rate/p95, consumer lag, outbox lag, pesanan/menit).
 - **Audit admin (M5):** middleware di gateway mencatat setiap mutasi admin yang berhasil
   (POST/PATCH/DELETE di bawah `/admin`) sebagai log terstruktur: `actor`, `action`, `path`, `status`,
   `request_id`. Tabel `audit_logs` persisten ditunda (lihat §15). Perubahan status pesanan tetap
   tersimpan di `order_status_history`.
+
+Panduan penanganan insiden: `docs/RUNBOOK.md`.
 
 ---
 
