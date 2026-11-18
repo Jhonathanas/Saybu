@@ -53,6 +53,7 @@ func main() {
 				log.Error("konsumer event berhenti", "error", err)
 			}
 		}()
+		go consumer.ReportLagLoop(ctx, metrics, 15*time.Second)
 
 		checks = append(checks, httpx.NamedCheck{Name: "kafka", Check: consumer.Ping})
 	} else {

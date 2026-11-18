@@ -99,7 +99,7 @@ func (s *Service) UploadProof(ctx context.Context, in domain.UploadProofInput) (
 		UploadedBy:  uploadedBy(in),
 	}
 	updated, err := s.repo.AttachProof(ctx, p.ID, proof,
-		func(pay domain.Payment) ([]outbox.Record, error) { return s.proofUploadedEvent(pay) })
+		func(pay domain.Payment) ([]outbox.Record, error) { return s.proofUploadedEvent(ctx, pay) })
 	if err != nil {
 		return domain.Payment{}, err
 	}
@@ -153,9 +153,9 @@ func (s *Service) Verify(ctx context.Context, id, decision, note, adminID string
 	updated, err := s.repo.Verify(ctx, p.ID, toStatus, note, adminID,
 		func(pay domain.Payment) ([]outbox.Record, error) {
 			if toStatus == domain.StatusPaid {
-				return s.confirmedEvent(pay)
+				return s.confirmedEvent(ctx, pay)
 			}
-			return s.rejectedEvent(pay, note)
+			return s.rejectedEvent(ctx, pay, note)
 		})
 	if err != nil {
 		return domain.Payment{}, err
@@ -266,7 +266,7 @@ func uploadedBy(in domain.UploadProofInput) string {
 	return "guest"
 }
 
-func (s *Service) proofUploadedEvent(p domain.Payment) ([]outbox.Record, error) {
+func (s *Service) proofUploadedEvent(ctx context.Context, p domain.Payment) ([]outbox.Record, error) {
 	payload := map[string]any{
 		"payment_id": p.ID,
 		"order_id":   p.OrderID,
@@ -274,14 +274,14 @@ func (s *Service) proofUploadedEvent(p domain.Payment) ([]outbox.Record, error) 
 		"amount":     p.Amount,
 		"proof_url":  p.ProofURL,
 	}
-	rec, err := newRecord("payment.proof_uploaded", p.OrderID, payload)
+	rec, err := newRecord(ctx, "payment.proof_uploaded", p.OrderID, payload)
 	if err != nil {
 		return nil, err
 	}
 	return []outbox.Record{rec}, nil
 }
 
-func (s *Service) confirmedEvent(p domain.Payment) ([]outbox.Record, error) {
+func (s *Service) confirmedEvent(ctx context.Context, p domain.Payment) ([]outbox.Record, error) {
 	payload := map[string]any{
 		"payment_id":  p.ID,
 		"order_id":    p.OrderID,
@@ -289,29 +289,29 @@ func (s *Service) confirmedEvent(p domain.Payment) ([]outbox.Record, error) {
 		"amount":      p.Amount,
 		"verified_by": p.VerifiedBy,
 	}
-	rec, err := newRecord("payment.confirmed", p.OrderID, payload)
+	rec, err := newRecord(ctx, "payment.confirmed", p.OrderID, payload)
 	if err != nil {
 		return nil, err
 	}
 	return []outbox.Record{rec}, nil
 }
 
-func (s *Service) rejectedEvent(p domain.Payment, reason string) ([]outbox.Record, error) {
+func (s *Service) rejectedEvent(ctx context.Context, p domain.Payment, reason string) ([]outbox.Record, error) {
 	payload := map[string]any{
 		"payment_id": p.ID,
 		"order_id":   p.OrderID,
 		"code":       p.OrderCode,
 		"reason":     reason,
 	}
-	rec, err := newRecord("payment.rejected", p.OrderID, payload)
+	rec, err := newRecord(ctx, "payment.rejected", p.OrderID, payload)
 	if err != nil {
 		return nil, err
 	}
 	return []outbox.Record{rec}, nil
 }
 
-func newRecord(eventType, key string, payload any) (outbox.Record, error) {
-	ev, err := kafkax.NewEvent(eventType, key, payload, producerName)
+func newRecord(ctx context.Context, eventType, key string, payload any) (outbox.Record, error) {
+	ev, err := kafkax.NewEventCtx(ctx, eventType, key, payload, producerName)
 	if err != nil {
 		return outbox.Record{}, fmt.Errorf("service: bangun event %s: %w", eventType, err)
 	}

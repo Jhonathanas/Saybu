@@ -173,7 +173,7 @@ func (s *Service) CreateProduct(ctx context.Context, in CreateProductInput) (dom
 	}
 	domain.ApplyDefaults(&p)
 
-	events, err := s.productUpdatedEvents(p)
+	events, err := s.productUpdatedEvents(ctx, p)
 	if err != nil {
 		return domain.Product{}, err
 	}
@@ -254,7 +254,7 @@ func (s *Service) UpdateProduct(ctx context.Context, in UpdateProductInput) (dom
 		}
 	}
 
-	events, err := s.productUpdatedEvents(existing)
+	events, err := s.productUpdatedEvents(ctx, existing)
 	if err != nil {
 		return domain.Product{}, err
 	}
@@ -286,7 +286,7 @@ func (s *Service) SetStock(ctx context.Context, id, mode string, qty int64) (dom
 
 	var events []outbox.Record
 	if existing.Stock > existing.LowStockThreshold && newStock <= existing.LowStockThreshold {
-		ev, err := s.stockLowEvent(existing, newStock)
+		ev, err := s.stockLowEvent(ctx, existing, newStock)
 		if err != nil {
 			return domain.Product{}, err
 		}
@@ -305,7 +305,7 @@ func (s *Service) DeleteProduct(ctx context.Context, id string) error {
 		return err
 	}
 	existing.IsActive = false
-	events, err := s.productUpdatedEvents(existing)
+	events, err := s.productUpdatedEvents(ctx, existing)
 	if err != nil {
 		return err
 	}
@@ -332,7 +332,9 @@ func (s *Service) ReserveStock(ctx context.Context, orderID string, items []doma
 	if len(items) == 0 {
 		return nil, (&domain.ValidationError{}).Add("items", "Daftar item tidak boleh kosong.")
 	}
-	return s.repo.ReserveStock(ctx, orderID, items, s.stockLowEvents)
+	return s.repo.ReserveStock(ctx, orderID, items, func(products []domain.Product) ([]outbox.Record, error) {
+		return s.stockLowEvents(ctx, products)
+	})
 }
 
 // ReleaseStock mengembalikan stok reservasi order.
@@ -421,7 +423,7 @@ func (s *Service) ensureCategory(ctx context.Context, categoryID string) error {
 	return err
 }
 
-func (s *Service) productUpdatedEvents(p domain.Product) ([]outbox.Record, error) {
+func (s *Service) productUpdatedEvents(ctx context.Context, p domain.Product) ([]outbox.Record, error) {
 	payload := map[string]any{
 		"product_id": p.ID,
 		"name":       p.Name,
@@ -430,14 +432,14 @@ func (s *Service) productUpdatedEvents(p domain.Product) ([]outbox.Record, error
 		"unit":       p.Unit,
 		"is_active":  p.IsActive,
 	}
-	rec, err := newRecord("product.updated", p.ID, payload)
+	rec, err := newRecord(ctx, "product.updated", p.ID, payload)
 	if err != nil {
 		return nil, err
 	}
 	return []outbox.Record{rec}, nil
 }
 
-func (s *Service) stockLowEvent(p domain.Product, remaining int64) (outbox.Record, error) {
+func (s *Service) stockLowEvent(ctx context.Context, p domain.Product, remaining int64) (outbox.Record, error) {
 	payload := map[string]any{
 		"product_id": p.ID,
 		"name":       p.Name,
@@ -445,14 +447,14 @@ func (s *Service) stockLowEvent(p domain.Product, remaining int64) (outbox.Recor
 		"unit":       p.Unit,
 		"threshold":  p.LowStockThreshold,
 	}
-	return newRecord("stock.low", p.ID, payload)
+	return newRecord(ctx, "stock.low", p.ID, payload)
 }
 
 // stockLowEvents membangun record stock.low untuk beberapa produk sekaligus.
-func (s *Service) stockLowEvents(products []domain.Product) ([]outbox.Record, error) {
+func (s *Service) stockLowEvents(ctx context.Context, products []domain.Product) ([]outbox.Record, error) {
 	recs := make([]outbox.Record, 0, len(products))
 	for _, p := range products {
-		rec, err := s.stockLowEvent(p, p.Stock)
+		rec, err := s.stockLowEvent(ctx, p, p.Stock)
 		if err != nil {
 			return nil, err
 		}
@@ -461,8 +463,8 @@ func (s *Service) stockLowEvents(products []domain.Product) ([]outbox.Record, er
 	return recs, nil
 }
 
-func newRecord(eventType, key string, payload any) (outbox.Record, error) {
-	ev, err := kafkax.NewEvent(eventType, key, payload, producerName)
+func newRecord(ctx context.Context, eventType, key string, payload any) (outbox.Record, error) {
+	ev, err := kafkax.NewEventCtx(ctx, eventType, key, payload, producerName)
 	if err != nil {
 		return outbox.Record{}, fmt.Errorf("service: bangun event %s: %w", eventType, err)
 	}

@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/twmb/franz-go/pkg/kadm"
 	"github.com/twmb/franz-go/pkg/kgo"
 
 	"saybu/pkg/telemetry"
@@ -19,6 +20,7 @@ type Consumer struct {
 	client      *kgo.Client
 	log         *slog.Logger
 	handler     Handler
+	group       string
 	maxAttempts int
 }
 
@@ -43,7 +45,7 @@ func NewConsumer(brokers []string, group string, topics []string, handler Handle
 	if err != nil {
 		return nil, fmt.Errorf("kafka consumer: %w", err)
 	}
-	return &Consumer{client: client, log: log, handler: handler, maxAttempts: 3}, nil
+	return &Consumer{client: client, log: log, handler: handler, group: group, maxAttempts: 3}, nil
 }
 
 // Run membaca event sampai context dibatalkan.
@@ -80,6 +82,14 @@ func (c *Consumer) process(ctx context.Context, rec *kgo.Record) error {
 		c.log.Error("kafka invalid event", "topic", rec.Topic, "error", err)
 		return c.toDLQ(ctx, rec, err)
 	}
+
+	// Lanjutkan jejak request: pakai correlation_id dari producer, atau
+	// event_id sebagai cadangan bila event lama belum memilikinya.
+	corr := ev.CorrelationID
+	if corr == "" {
+		corr = ev.EventID
+	}
+	ctx = telemetry.WithRequestID(ctx, corr)
 
 	var lastErr error
 	for attempt := 1; attempt <= c.maxAttempts; attempt++ {
@@ -134,3 +144,63 @@ func (c *Consumer) Close() { c.client.Close() }
 
 // Ping memeriksa koneksi ke broker (untuk readiness).
 func (c *Consumer) Ping(ctx context.Context) error { return c.client.Ping(ctx) }
+
+// Lag mengembalikan lag (jumlah pesan tertinggal) per topic untuk consumer group ini.
+func (c *Consumer) Lag(ctx context.Context) (map[string]int64, error) {
+	adm := kadm.NewClient(c.client)
+	lags, err := adm.Lag(ctx, c.group)
+	if err != nil {
+		return nil, err
+	}
+	dl, ok := lags[c.group]
+	if !ok {
+		return nil, fmt.Errorf("kafka: grup %s tidak ditemukan", c.group)
+	}
+	if err := dl.Error(); err != nil {
+		return nil, err
+	}
+	out := make(map[string]int64)
+	for topic, tl := range dl.Lag.TotalByTopic() {
+		out[topic] = tl.Lag
+	}
+	return out, nil
+}
+
+// LagReporter menerima lag consumer (dipenuhi *telemetry.Metrics).
+type LagReporter interface {
+	SetConsumerLag(group, topic string, lag int64)
+}
+
+// ReportLagLoop menghitung lag consumer secara berkala dan memperbarui metrik
+// sampai context dibatalkan.
+func (c *Consumer) ReportLagLoop(ctx context.Context, reporter LagReporter, interval time.Duration) {
+	if reporter == nil {
+		return
+	}
+	if interval <= 0 {
+		interval = 15 * time.Second
+	}
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		c.reportLag(ctx, reporter)
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+	}
+}
+
+func (c *Consumer) reportLag(ctx context.Context, reporter LagReporter) {
+	lags, err := c.Lag(ctx)
+	if err != nil {
+		if ctx.Err() == nil {
+			c.log.Warn("kafka lag tidak dapat dihitung", "group", c.group, "error", err)
+		}
+		return
+	}
+	for topic, lag := range lags {
+		reporter.SetConsumerLag(c.group, topic, lag)
+	}
+}

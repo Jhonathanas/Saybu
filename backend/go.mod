@@ -10,6 +10,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/prometheus/client_golang v1.25.0
 	github.com/twmb/franz-go v1.22.3
+	github.com/twmb/franz-go/pkg/kadm v1.20.0
 	golang.org/x/crypto v0.57.0
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260817212433-ac3dfec99bb1
 	google.golang.org/grpc v1.85.0

@@ -120,6 +120,11 @@ type Publisher interface {
 	PublishRaw(ctx context.Context, topic, key string, value []byte, headers map[string]string) error
 }
 
+// LagReporter menerima usia event tertua yang masih menunggu dikirim.
+type LagReporter interface {
+	ObserveOutboxLag(d time.Duration)
+}
+
 // Relay memindahkan baris outbox ke Kafka secara berkala.
 type Relay struct {
 	store     PendingStore
@@ -127,12 +132,16 @@ type Relay struct {
 	log       *slog.Logger
 	interval  time.Duration
 	batch     int
+	lag       LagReporter
 }
 
 // NewRelay membuat Relay.
 func NewRelay(store PendingStore, publisher Publisher, log *slog.Logger) *Relay {
 	return &Relay{store: store, publisher: publisher, log: log, interval: 200 * time.Millisecond, batch: 100}
 }
+
+// SetLagReporter memasang pelapor lag outbox (opsional).
+func (r *Relay) SetLagReporter(l LagReporter) { r.lag = l }
 
 // Run menjalankan relay sampai context dibatalkan.
 func (r *Relay) Run(ctx context.Context) {
@@ -159,6 +168,13 @@ func (r *Relay) RunOnce(ctx context.Context) (int, error) {
 	records, err := r.store.FetchPending(ctx, r.batch)
 	if err != nil {
 		return 0, err
+	}
+	if r.lag != nil {
+		var oldest time.Duration
+		if len(records) > 0 {
+			oldest = time.Since(records[0].CreatedAt)
+		}
+		r.lag.ObserveOutboxLag(oldest)
 	}
 	sent := 0
 	for _, rec := range records {

@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"testing"
+	"time"
 )
 
 type fakeStore struct {
@@ -48,6 +49,16 @@ func testLogger() *slog.Logger {
 	return slog.New(slog.NewTextHandler(io.Discard, nil))
 }
 
+type fakeLagReporter struct {
+	reported []time.Duration
+	called   bool
+}
+
+func (f *fakeLagReporter) ObserveOutboxLag(d time.Duration) {
+	f.called = true
+	f.reported = append(f.reported, d)
+}
+
 func TestRelayRunOnce(t *testing.T) {
 	store := &fakeStore{pending: []Record{
 		{ID: 1, Topic: "order.events.v1", Payload: []byte(`{}`)},
@@ -65,6 +76,41 @@ func TestRelayRunOnce(t *testing.T) {
 	}
 	if len(pub.published) != 2 || len(store.published) != 2 {
 		t.Fatalf("published=%v marked=%v", pub.published, store.published)
+	}
+}
+
+func TestRelayReportsLag(t *testing.T) {
+	created := time.Now().Add(-3 * time.Second)
+	store := &fakeStore{pending: []Record{
+		{ID: 1, Topic: "order.events.v1", CreatedAt: created},
+		{ID: 2, Topic: "order.events.v1", CreatedAt: time.Now()},
+	}}
+	lag := &fakeLagReporter{}
+	relay := NewRelay(store, &fakePublisher{}, testLogger())
+	relay.SetLagReporter(lag)
+
+	if _, err := relay.RunOnce(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if !lag.called || len(lag.reported) != 1 {
+		t.Fatalf("lag dilaporkan = %v", lag.reported)
+	}
+	if lag.reported[0] < 2*time.Second {
+		t.Fatalf("lag = %v, harusnya ~3s (usia record tertua)", lag.reported[0])
+	}
+}
+
+func TestRelayReportsZeroLagWhenEmpty(t *testing.T) {
+	store := &fakeStore{}
+	lag := &fakeLagReporter{}
+	relay := NewRelay(store, &fakePublisher{}, testLogger())
+	relay.SetLagReporter(lag)
+
+	if _, err := relay.RunOnce(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if len(lag.reported) != 1 || lag.reported[0] != 0 {
+		t.Fatalf("lag = %v, want 0", lag.reported)
 	}
 }
 

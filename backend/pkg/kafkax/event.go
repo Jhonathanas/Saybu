@@ -3,11 +3,13 @@
 package kafkax
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
 
 	"saybu/pkg/ids"
+	"saybu/pkg/telemetry"
 )
 
 // Event adalah envelope standar semua event Saybu.
@@ -37,6 +39,17 @@ func NewEvent(eventType, aggregateID string, payload any, producer string) (Even
 		Producer:    producer,
 		Payload:     raw,
 	}, nil
+}
+
+// NewEventCtx seperti NewEvent tetapi mengisi CorrelationID dari request id
+// yang tersimpan di context, sehingga satu request bisa dilacak sampai event.
+func NewEventCtx(ctx context.Context, eventType, aggregateID string, payload any, producer string) (Event, error) {
+	ev, err := NewEvent(eventType, aggregateID, payload, producer)
+	if err != nil {
+		return Event{}, err
+	}
+	ev.CorrelationID = telemetry.RequestID(ctx)
+	return ev, nil
 }
 
 // Marshal mengubah Event menjadi JSON.

@@ -68,6 +68,8 @@ type Service struct {
 	log      *slog.Logger
 	expiry   time.Duration
 	now      func() time.Time
+
+	onOrderCreated func()
 }
 
 // New membuat Service.
@@ -89,6 +91,10 @@ func New(r Repo, catalog CatalogClient, shipping ShippingClient, log *slog.Logge
 	}
 	return &Service{repo: r, catalog: catalog, shipping: shipping, log: log, expiry: expiry, now: time.Now}, nil
 }
+
+// SetOrderCreatedHook memasang hook yang dipanggil setiap pesanan baru tersimpan
+// (dipakai untuk metrik). Opsional.
+func (s *Service) SetOrderCreatedHook(fn func()) { s.onOrderCreated = fn }
 
 // CreateOrder menjalankan saga checkout.
 //
@@ -161,13 +167,16 @@ func (s *Service) CreateOrder(ctx context.Context, in domain.CreateInput, idempo
 	}
 
 	created, err := s.repo.CreateOrder(ctx, order, repo.Idempotency{Key: key, RequestHash: hash},
-		func(o domain.Order) ([]outbox.Record, error) { return s.orderCreatedEvent(o) })
+		func(o domain.Order) ([]outbox.Record, error) { return s.orderCreatedEvent(ctx, o) })
 	if err != nil {
 		s.compensate(ctx, orderID)
 		if errors.Is(err, domain.ErrIdempotencyExists) {
 			return s.replayExisting(ctx, key, hash)
 		}
 		return domain.Order{}, err
+	}
+	if s.onOrderCreated != nil {
+		s.onOrderCreated()
 	}
 	return created, nil
 }
@@ -244,7 +253,7 @@ func (s *Service) UpdateStatus(ctx context.Context, id, to, note, actor string) 
 	from := o.Status
 	return s.repo.Transition(ctx, id, from, to, note, actor,
 		func(ord domain.Order) ([]outbox.Record, error) {
-			return s.statusChangedEvent(ord, from, to, actor, note)
+			return s.statusChangedEvent(ctx, ord, from, to, actor, note)
 		})
 }
 
@@ -267,14 +276,14 @@ func (s *Service) CancelOrder(ctx context.Context, code, phone, userID, reason s
 	}
 	reason = strings.TrimSpace(reason)
 	return s.repo.Transition(ctx, o.ID, o.Status, domain.StatusCancelled, reason, "customer",
-		func(ord domain.Order) ([]outbox.Record, error) { return s.orderCancelledEvent(ord, reason) })
+		func(ord domain.Order) ([]outbox.Record, error) { return s.orderCancelledEvent(ctx, ord, reason) })
 }
 
 // ExpireDue menandai pesanan kedaluwarsa dan menulis event order.expired.
 // Mengembalikan jumlah pesanan yang kedaluwarsa.
 func (s *Service) ExpireDue(ctx context.Context) (int, error) {
 	orders, err := s.repo.ExpireDue(ctx, 100, func(o domain.Order) ([]outbox.Record, error) {
-		return s.orderExpiredEvent(o)
+		return s.orderExpiredEvent(ctx, o)
 	})
 	if err != nil {
 		return 0, err
@@ -439,7 +448,7 @@ func requestHash(in domain.CreateInput) string {
 	return hex.EncodeToString(sum[:])
 }
 
-func (s *Service) orderCreatedEvent(o domain.Order) ([]outbox.Record, error) {
+func (s *Service) orderCreatedEvent(ctx context.Context, o domain.Order) ([]outbox.Record, error) {
 	items := make([]map[string]any, 0, len(o.Items))
 	for _, it := range o.Items {
 		items = append(items, map[string]any{
@@ -465,14 +474,14 @@ func (s *Service) orderCreatedEvent(o domain.Order) ([]outbox.Record, error) {
 		"items":          items,
 		"expires_at":     o.ExpiresAt.Format(time.RFC3339),
 	}
-	rec, err := newRecord("order.created", o.ID, payload)
+	rec, err := newRecord(ctx, "order.created", o.ID, payload)
 	if err != nil {
 		return nil, err
 	}
 	return []outbox.Record{rec}, nil
 }
 
-func (s *Service) orderCancelledEvent(o domain.Order, reason string) ([]outbox.Record, error) {
+func (s *Service) orderCancelledEvent(ctx context.Context, o domain.Order, reason string) ([]outbox.Record, error) {
 	payload := map[string]any{
 		"order_id": o.ID,
 		"code":     o.Code,
@@ -480,20 +489,20 @@ func (s *Service) orderCancelledEvent(o domain.Order, reason string) ([]outbox.R
 		"by":       "customer",
 		"items":    itemRefs(o.Items),
 	}
-	rec, err := newRecord("order.cancelled", o.ID, payload)
+	rec, err := newRecord(ctx, "order.cancelled", o.ID, payload)
 	if err != nil {
 		return nil, err
 	}
 	return []outbox.Record{rec}, nil
 }
 
-func (s *Service) orderExpiredEvent(o domain.Order) ([]outbox.Record, error) {
+func (s *Service) orderExpiredEvent(ctx context.Context, o domain.Order) ([]outbox.Record, error) {
 	payload := map[string]any{
 		"order_id": o.ID,
 		"code":     o.Code,
 		"items":    itemRefs(o.Items),
 	}
-	rec, err := newRecord("order.expired", o.ID, payload)
+	rec, err := newRecord(ctx, "order.expired", o.ID, payload)
 	if err != nil {
 		return nil, err
 	}
@@ -551,7 +560,7 @@ func (s *Service) HandlePaymentEvent(ctx context.Context, ev kafkax.Event) error
 	order, applied, err := s.repo.TransitionFromPayment(ctx, ev.EventID, ev.Type, p.OrderID,
 		from, to, note, actor,
 		func(o domain.Order) ([]outbox.Record, error) {
-			return s.statusChangedEvent(o, from, to, actor, note)
+			return s.statusChangedEvent(ctx, o, from, to, actor, note)
 		})
 	if err != nil {
 		return err
@@ -566,7 +575,7 @@ func (s *Service) HandlePaymentEvent(ctx context.Context, ev kafkax.Event) error
 	return nil
 }
 
-func (s *Service) statusChangedEvent(o domain.Order, from, to, actor, note string) ([]outbox.Record, error) {
+func (s *Service) statusChangedEvent(ctx context.Context, o domain.Order, from, to, actor, note string) ([]outbox.Record, error) {
 	payload := map[string]any{
 		"order_id": o.ID,
 		"code":     o.Code,
@@ -575,7 +584,7 @@ func (s *Service) statusChangedEvent(o domain.Order, from, to, actor, note strin
 		"by":       actor,
 		"note":     note,
 	}
-	rec, err := newRecord("order.status_changed", o.ID, payload)
+	rec, err := newRecord(ctx, "order.status_changed", o.ID, payload)
 	if err != nil {
 		return nil, err
 	}
@@ -589,8 +598,8 @@ func actorOr(actor, def string) string {
 	return actor
 }
 
-func newRecord(eventType, key string, payload any) (outbox.Record, error) {
-	ev, err := kafkax.NewEvent(eventType, key, payload, producerName)
+func newRecord(ctx context.Context, eventType, key string, payload any) (outbox.Record, error) {
+	ev, err := kafkax.NewEventCtx(ctx, eventType, key, payload, producerName)
 	if err != nil {
 		return outbox.Record{}, fmt.Errorf("service: bangun event %s: %w", eventType, err)
 	}

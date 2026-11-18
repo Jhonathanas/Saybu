@@ -20,6 +20,7 @@ import (
 	"saybu/pkg/kafkax"
 	logpkg "saybu/pkg/logger"
 	"saybu/pkg/outbox"
+	"saybu/pkg/telemetry"
 	"saybu/services/order/internal/repo"
 	"saybu/services/order/internal/service"
 	transportgrpc "saybu/services/order/internal/transport/grpc"
@@ -69,6 +70,9 @@ func main() {
 		{Name: "postgres", Check: func(ctx context.Context) error { return pool.Ping(ctx) }},
 	}
 
+	metrics := telemetry.NewMetrics("order")
+	svc.SetOrderCreatedHook(metrics.IncOrdersCreated)
+
 	// Producer Kafka + relay outbox (opsional bila broker tidak dikonfigurasi).
 	if brokers := config.List("KAFKA_BROKERS", nil); len(brokers) > 0 {
 		producer, err := kafkax.NewProducer(brokers)
@@ -79,6 +83,7 @@ func main() {
 		defer producer.Close()
 
 		relay := outbox.NewRelay(outbox.NewStore(pool), producer, log)
+		relay.SetLagReporter(metrics)
 		go relay.Run(ctx)
 
 		// Konsumer event pembayaran: bukti/verifikasi menaikkan status pesanan.
@@ -94,6 +99,7 @@ func main() {
 				log.Error("konsumer payment.events berhenti", "error", err)
 			}
 		}()
+		go consumer.ReportLagLoop(ctx, metrics, 15*time.Second)
 
 		checks = append(checks, httpx.NamedCheck{Name: "kafka", Check: producer.Ping})
 	}
@@ -106,6 +112,7 @@ func main() {
 		GRPCAddr:  config.Get("ORDER_GRPC_ADDR", ":50054"),
 		AdminAddr: config.Get("ORDER_ADMIN_ADDR", ":9104"),
 		Logger:    log,
+		Metrics:   metrics,
 		Checks:    checks,
 		Register: func(srv *grpc.Server) {
 			transportgrpc.Register(srv, svc, log)
