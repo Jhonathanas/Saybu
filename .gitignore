@@ -6,6 +6,7 @@
 # --- data & build output ---
 data/
 !data/.gitkeep
+backups/
 backend/bin/
 *.exe
 *.test

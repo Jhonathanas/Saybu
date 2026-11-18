@@ -6,7 +6,7 @@ COMPOSE ?= docker compose
 BUF     ?= buf
 SERVICES := gateway auth catalog shipping order payment notification
 
-.PHONY: help up down logs ps restart proto migrate migrate-down seed dev dev-frontend test test-frontend test-integration lint lint-frontend fmt build clean
+.PHONY: help up down logs ps restart proto migrate migrate-down seed dev dev-frontend test test-frontend test-integration lint lint-frontend fmt build clean observability observability-down load-test backup restore
 
 help: ## Tampilkan daftar target
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -26,6 +26,27 @@ ps: ## Status container
 
 restart: ## Restart container infra
 	$(COMPOSE) restart
+
+observability: ## Jalankan Prometheus + Grafana (profil observability)
+	$(COMPOSE) --profile observability up -d prometheus grafana
+	@echo "Prometheus: http://localhost:9090"
+	@echo "Grafana:    http://localhost:3000 ($${GRAFANA_USER:-admin}/$${GRAFANA_PASSWORD:-admin})"
+
+observability-down: ## Hentikan Prometheus + Grafana
+	$(COMPOSE) --profile observability down prometheus grafana
+
+load-test: ## Load test k6 (100 VU katalog + 10 checkout/detik) via Docker
+	docker run --rm -i --add-host=host.docker.internal:host-gateway \
+		-e API_BASE=$${API_BASE:-http://host.docker.internal:8081} \
+		-e DURATION=$${DURATION:-30s} \
+		grafana/k6 run - < infra/load/k6-saybu.js
+
+backup: ## Backup semua database ke backups/<timestamp>
+	bash infra/scripts/backup.sh
+
+restore: ## Restore database dari backup (pakai DIR=backups/<timestamp>)
+	@test -n "$(DIR)" || { echo "pakai: make restore DIR=backups/<timestamp>"; exit 1; }
+	bash infra/scripts/restore.sh "$(DIR)"
 
 proto: ## Generate kode dari protobuf
 	cd backend/proto && $(BUF) lint && $(BUF) generate
