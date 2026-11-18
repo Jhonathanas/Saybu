@@ -147,6 +147,7 @@ func main() {
 	r.Use(httpx.RequestID)
 	r.Use(httpx.Recover(log))
 	r.Use(httpx.Logger(log))
+	r.Use(httpx.SecurityHeaders(config.Get("APP_ENV", "development") == "production"))
 	r.Use(metrics.HTTPMiddleware)
 	r.Use(httpx.CORS(config.List("GATEWAY_CORS_ORIGINS", []string{"http://localhost:5173"})))
 
@@ -227,6 +228,9 @@ func main() {
 	))
 
 	r.Route("/api/v1", func(r chi.Router) {
+		// Batas baca umum: 120/menit per IP (API_SPEC §10).
+		r.Use(ratelimit.Middleware(ratelimit.New(120, time.Minute), ratelimit.ReadMethods, ratelimit.ByIP))
+
 		r.Get("/version", func(w http.ResponseWriter, req *http.Request) {
 			httpx.Data(w, http.StatusOK, map[string]string{
 				"service": "gateway",
@@ -264,6 +268,14 @@ func main() {
 
 			r.Route("/admin", func(r chi.Router) {
 				r.Use(authmw.RequireRole("admin"))
+				// Batas tulis admin: 60/menit per user (API_SPEC §10).
+				r.Use(ratelimit.Middleware(ratelimit.New(60, time.Minute), ratelimit.WriteMethods,
+					func(req *http.Request) string {
+						if id, ok := authmw.IdentityFrom(req.Context()); ok {
+							return "user:" + id.UserID
+						}
+						return ratelimit.ByIP(req)
+					}))
 				r.Use(auditmw.Middleware(log))
 				r.Get("/users", authHandler.ListUsers)
 

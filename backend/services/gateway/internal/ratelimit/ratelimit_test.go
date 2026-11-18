@@ -64,3 +64,23 @@ func TestNewNormalizesInvalidConfig(t *testing.T) {
 		t.Fatalf("window = %v, want 1m", l.window)
 	}
 }
+
+func TestAllowEvictsExpiredBuckets(t *testing.T) {
+	now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	l := NewWithClock(5, time.Minute, func() time.Time { return now })
+
+	// Banyak key unik pada satu window; memori tumbuh.
+	for i := 0; i < 100; i++ {
+		l.Allow("ip-" + string(rune('a'+i%26)) + string(rune('0'+i/26)))
+	}
+	if got := l.Size(); got == 0 {
+		t.Fatal("bucket seharusnya terisi")
+	}
+
+	// Lewati satu window: sweep berikutnya harus membersihkan bucket lama.
+	now = now.Add(2 * time.Minute)
+	l.Allow("ip-baru")
+	if got := l.Size(); got != 1 {
+		t.Fatalf("Size = %d, want 1 setelah eviction", got)
+	}
+}

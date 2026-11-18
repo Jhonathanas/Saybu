@@ -94,3 +94,30 @@ func TestReady(t *testing.T) {
 		t.Fatalf("status = %d, want 503", w.Code)
 	}
 }
+
+func TestSecurityHeaders(t *testing.T) {
+	handler := SecurityHeaders(true)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/v1/products", nil))
+
+	for header, want := range map[string]string{
+		"X-Content-Type-Options":    "nosniff",
+		"X-Frame-Options":           "DENY",
+		"Referrer-Policy":           "strict-origin-when-cross-origin",
+		"Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+	} {
+		if got := w.Header().Get(header); got != want {
+			t.Errorf("%s = %q, want %q", header, got, want)
+		}
+	}
+
+	// Tanpa HSTS: header tidak diset.
+	plain := httptest.NewRecorder()
+	SecurityHeaders(false)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {})).
+		ServeHTTP(plain, httptest.NewRequest(http.MethodGet, "/", nil))
+	if plain.Header().Get("Strict-Transport-Security") != "" {
+		t.Error("HSTS tidak boleh diset di luar produksi")
+	}
+}

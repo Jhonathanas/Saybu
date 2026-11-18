@@ -7,7 +7,6 @@ import (
 	"io"
 	"log/slog"
 	"math"
-	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -319,17 +318,7 @@ func queryInt(r *http.Request, key string, def int) int {
 }
 
 func clientIP(r *http.Request) string {
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		if idx := strings.IndexByte(xff, ','); idx >= 0 {
-			return strings.TrimSpace(xff[:idx])
-		}
-		return strings.TrimSpace(xff)
-	}
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err == nil {
-		return host
-	}
-	return r.RemoteAddr
+	return httpx.ClientIP(r)
 }
 
 func outgoingContext(r *http.Request) context.Context {

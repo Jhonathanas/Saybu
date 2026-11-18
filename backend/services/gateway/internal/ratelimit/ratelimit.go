@@ -14,11 +14,12 @@ type bucket struct {
 
 // Limiter membatasi jumlah percobaan per key dalam satu window.
 type Limiter struct {
-	mu      sync.Mutex
-	buckets map[string]*bucket
-	limit   int
-	window  time.Duration
-	now     func() time.Time
+	mu        sync.Mutex
+	buckets   map[string]*bucket
+	limit     int
+	window    time.Duration
+	now       func() time.Time
+	nextSweep time.Time
 }
 
 // New membuat Limiter dengan jam sistem.
@@ -49,6 +50,17 @@ func (l *Limiter) Allow(key string) (allowed bool, retryAfter time.Duration) {
 	defer l.mu.Unlock()
 
 	now := l.now()
+	// Bersihkan bucket kedaluwarsa secara berkala agar memori tidak tumbuh
+	// tanpa batas saat banyak key (mis. banyak IP) muncul.
+	if !now.Before(l.nextSweep) {
+		for k, b := range l.buckets {
+			if !now.Before(b.reset) {
+				delete(l.buckets, k)
+			}
+		}
+		l.nextSweep = now.Add(l.window)
+	}
+
 	b, ok := l.buckets[key]
 	if !ok || !now.Before(b.reset) {
 		l.buckets[key] = &bucket{count: 1, reset: now.Add(l.window)}
@@ -59,4 +71,11 @@ func (l *Limiter) Allow(key string) (allowed bool, retryAfter time.Duration) {
 	}
 	b.count++
 	return true, 0
+}
+
+// Size mengembalikan jumlah bucket aktif (untuk test/pemantauan).
+func (l *Limiter) Size() int {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return len(l.buckets)
 }
