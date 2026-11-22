@@ -379,6 +379,11 @@ yang memetakan API lama ke primitive shadcn. `Select` sengaja native agar `selec
 pada test RTL tetap bekerja. Semua warna memakai token `--background/foreground/primary/…`;
 status memakai `muted`, `secondary`, dan `destructive`.
 
+Lanjutan 2026-11-22: seluruh 12 produk seed kini punya entri `product_images` (foto spesifik
+untuk pisang/apel/bayam/tomat, default kategori untuk sisanya). `ProductImage` memakai
+`/images/produk-default.webp` bila `src` kosong atau gagal dimuat. Seed hanya menambah gambar
+yang belum ada, tidak menimpa unggahan admin.
+
 ---
 
 ## Definition of Done (setiap task)

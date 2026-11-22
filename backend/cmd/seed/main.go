@@ -38,6 +38,7 @@ type productSeed struct {
 	stock        int64
 	minQty       int64
 	stepQty      int64
+	images       []string
 }
 
 type zoneSeed struct {
@@ -106,20 +107,32 @@ func categories() []categorySeed {
 	}
 }
 
+// URL gambar contoh disimpan relatif terhadap origin frontend agar bisa
+// dilayani langsung dari frontend/public/images (dev & produksi statis).
+const (
+	imgPisang  = "/images/produk-pisang.webp"
+	imgApel    = "/images/produk-apel.webp"
+	imgBayam   = "/images/produk-bayam.webp"
+	imgTomat   = "/images/produk-tomat.webp"
+	imgBuah    = "/images/kategori-buah.webp"
+	imgSayur   = "/images/kategori-sayur.webp"
+	imgDefault = "/images/produk-default.webp"
+)
+
 func products() []productSeed {
 	return []productSeed{
-		{"buah", "Pisang Cavendish", "pisang-cavendish", "Pisang manis pulen, cocok untuk sarapan.", "kg", 18000, 25000, 250, 250},
-		{"buah", "Jeruk Baby Pacitan", "jeruk-baby-pacitan", "Jeruk baby manis segar dari Pacitan.", "kg", 25000, 20000, 250, 250},
-		{"buah", "Apel Fuji", "apel-fuji", "Apel Fuji renyah dengan rasa manis seimbang.", "kg", 32000, 15000, 250, 250},
-		{"buah", "Semangka Merah", "semangka-merah", "Semangka merah tanpa biji, manis dan berair.", "buah", 35000, 20, 1, 1},
-		{"buah", "Mangga Harum Manis", "mangga-harum-manis", "Mangga harum manis matang pohon.", "kg", 28000, 12000, 250, 250},
-		{"buah", "Alpukat Mentega", "alpukat-mentega", "Alpukat mentega daging tebal dan pulen.", "buah", 12000, 30, 1, 1},
-		{"sayur", "Bayam Segar", "bayam-segar", "Bayam hijau segar hasil panen pagi.", "ikat", 5000, 40, 1, 1},
-		{"sayur", "Kangkung", "kangkung", "Kangkung segar, cocok untuk tumis.", "ikat", 4000, 35, 1, 1},
-		{"sayur", "Tomat Merah", "tomat-merah", "Tomat merah matang, segar untuk masakan.", "kg", 14000, 18000, 250, 250},
-		{"sayur", "Wortel Brastagi", "wortel-brastagi", "Wortel manis dari dataran tinggi Brastagi.", "kg", 16000, 20000, 250, 250},
-		{"sayur", "Kentang Dieng", "kentang-dieng", "Kentang Dieng empuk, cocok untuk sup dan perkedel.", "kg", 15000, 22000, 250, 250},
-		{"sayur", "Paket Sayur Sop", "paket-sayur-sop", "Paket sayur sop lengkap: wortel, kentang, buncis, seledri.", "paket", 15000, 25, 1, 1},
+		{"buah", "Pisang Cavendish", "pisang-cavendish", "Pisang manis pulen, cocok untuk sarapan.", "kg", 18000, 25000, 250, 250, []string{imgPisang}},
+		{"buah", "Jeruk Baby Pacitan", "jeruk-baby-pacitan", "Jeruk baby manis segar dari Pacitan.", "kg", 25000, 20000, 250, 250, []string{imgBuah}},
+		{"buah", "Apel Fuji", "apel-fuji", "Apel Fuji renyah dengan rasa manis seimbang.", "kg", 32000, 15000, 250, 250, []string{imgApel}},
+		{"buah", "Semangka Merah", "semangka-merah", "Semangka merah tanpa biji, manis dan berair.", "buah", 35000, 20, 1, 1, []string{imgBuah}},
+		{"buah", "Mangga Harum Manis", "mangga-harum-manis", "Mangga harum manis matang pohon.", "kg", 28000, 12000, 250, 250, []string{imgBuah}},
+		{"buah", "Alpukat Mentega", "alpukat-mentega", "Alpukat mentega daging tebal dan pulen.", "buah", 12000, 30, 1, 1, []string{imgBuah}},
+		{"sayur", "Bayam Segar", "bayam-segar", "Bayam hijau segar hasil panen pagi.", "ikat", 5000, 40, 1, 1, []string{imgBayam}},
+		{"sayur", "Kangkung", "kangkung", "Kangkung segar, cocok untuk tumis.", "ikat", 4000, 35, 1, 1, []string{imgSayur}},
+		{"sayur", "Tomat Merah", "tomat-merah", "Tomat merah matang, segar untuk masakan.", "kg", 14000, 18000, 250, 250, []string{imgTomat}},
+		{"sayur", "Wortel Brastagi", "wortel-brastagi", "Wortel manis dari dataran tinggi Brastagi.", "kg", 16000, 20000, 250, 250, []string{imgSayur}},
+		{"sayur", "Kentang Dieng", "kentang-dieng", "Kentang Dieng empuk, cocok untuk sup dan perkedel.", "kg", 15000, 22000, 250, 250, []string{imgSayur}},
+		{"sayur", "Paket Sayur Sop", "paket-sayur-sop", "Paket sayur sop lengkap: wortel, kentang, buncis, seledri.", "paket", 15000, 25, 1, 1, []string{imgDefault}},
 	}
 }
 
@@ -214,6 +227,24 @@ func seedProducts(ctx context.Context, pool *pgxpool.Pool, cats map[string]strin
 		`, ids.New(), catID, p.name, p.slug, p.description, p.unit,
 			p.price, p.stock, p.minQty, p.stepQty); err != nil {
 			return 0, fmt.Errorf("produk %s: %w", p.slug, err)
+		}
+
+		// Gambar contoh diisi hanya bila produk belum punya foto, agar tidak
+		// menimpa gambar yang sudah diunggah lewat panel admin.
+		var productID string
+		if err := tx.QueryRow(ctx, `SELECT id FROM products WHERE slug = $1`, p.slug).Scan(&productID); err != nil {
+			return 0, fmt.Errorf("produk %s: cari id: %w", p.slug, err)
+		}
+		for i, url := range p.images {
+			if _, err := tx.Exec(ctx, `
+				INSERT INTO product_images (id, product_id, url, sort)
+				SELECT $1, $2, $3, $4
+				WHERE NOT EXISTS (
+					SELECT 1 FROM product_images WHERE product_id = $2 AND url = $3
+				)
+			`, ids.New(), productID, url, i); err != nil {
+				return 0, fmt.Errorf("produk %s: gambar %s: %w", p.slug, url, err)
+			}
 		}
 	}
 

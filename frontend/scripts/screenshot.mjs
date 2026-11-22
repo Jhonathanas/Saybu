@@ -12,11 +12,20 @@ const categories = [
   { id: 'c-2', name: 'Sayur', slug: 'sayur', sort: 2 },
 ]
 
+// Sama dengan gambar contoh di backend/cmd/seed/main.go.
 const imageBySlug = {
   'pisang-cavendish': '/images/produk-pisang.webp',
+  'jeruk-baby-pacitan': '/images/kategori-buah.webp',
   'apel-fuji': '/images/produk-apel.webp',
+  'semangka-merah': '/images/kategori-buah.webp',
+  'mangga-harum-manis': '/images/kategori-buah.webp',
+  'alpukat-mentega': '/images/kategori-buah.webp',
   'bayam-segar': '/images/produk-bayam.webp',
+  'kangkung': '/images/kategori-sayur.webp',
   'tomat-merah': '/images/produk-tomat.webp',
+  'wortel-brastagi': '/images/kategori-sayur.webp',
+  'kentang-dieng': '/images/kategori-sayur.webp',
+  'paket-sayur-sop': '/images/produk-default.webp',
 }
 
 const seed = [
@@ -36,7 +45,7 @@ const seed = [
 
 const products = seed.map(([categoryName, categorySlug, name, slug, unit, price, stock, step], i) => {
   const category = categories.find((c) => c.slug === categorySlug)
-  const image = imageBySlug[slug] ?? '/images/kategori-semua.webp'
+  const image = imageBySlug[slug] ?? '/images/produk-default.webp'
   return {
     id: `p-${i + 1}`,
     slug,
