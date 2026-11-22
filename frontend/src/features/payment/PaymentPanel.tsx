@@ -53,16 +53,16 @@ export function PaymentPanel({ order, phone }: PaymentPanelProps) {
   const showBank = transfer && uploadable && bank !== null
 
   return (
-    <section className="rounded-2xl border border-stone-200 bg-white p-4">
+    <section className="rounded-2xl border border-border bg-card p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-semibold text-stone-900">Pembayaran</h2>
+        <h2 className="font-semibold text-foreground">Pembayaran</h2>
         <span
           className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${paymentStatusBadgeClass(payment.status)}`}
         >
           {paymentStatusLabel(payment.status)}
         </span>
       </div>
-      <p className="mt-1 text-sm text-stone-500">Nominal {formatIDR(payment.amount)}</p>
+      <p className="mt-1 text-sm text-muted-foreground">Nominal {formatIDR(payment.amount)}</p>
 
       {payment.status === 'PAID' && (
         <div className="mt-3">
@@ -91,36 +91,36 @@ export function PaymentPanel({ order, phone }: PaymentPanelProps) {
       )}
 
       {showBank && bank && (
-        <div className="mt-3 rounded-xl border border-brand-200 bg-brand-50 p-3">
-          <p className="text-sm text-brand-800">
+        <div className="mt-3 rounded-xl border border-border bg-muted p-3">
+          <p className="text-sm text-foreground">
             Transfer tepat sebesar <strong>{formatIDR(payment.amount)}</strong> ke rekening berikut,
             lalu unggah bukti transfer di bawah.
           </p>
           <dl className="mt-2 flex flex-col gap-1.5 text-sm">
             <div className="flex items-center justify-between gap-3">
-              <dt className="text-brand-800">Bank</dt>
-              <dd className="font-medium text-brand-900">{bank.name}</dd>
+              <dt className="text-foreground">Bank</dt>
+              <dd className="font-medium text-foreground">{bank.name}</dd>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <dt className="text-brand-800">Nomor rekening</dt>
-              <dd className="flex items-center gap-2 font-mono font-medium text-brand-900">
+              <dt className="text-foreground">Nomor rekening</dt>
+              <dd className="flex items-center gap-2 font-mono font-medium text-foreground">
                 {bank.account_number}
                 <CopyButton value={bank.account_number} />
               </dd>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <dt className="text-brand-800">Atas nama</dt>
-              <dd className="font-medium text-brand-900">{bank.account_holder}</dd>
+              <dt className="text-foreground">Atas nama</dt>
+              <dd className="font-medium text-foreground">{bank.account_holder}</dd>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <dt className="text-brand-800">Jumlah</dt>
-              <dd className="flex items-center gap-2 font-medium text-brand-900">
+              <dt className="text-foreground">Jumlah</dt>
+              <dd className="flex items-center gap-2 font-medium text-foreground">
                 {formatIDR(payment.amount)}
                 <CopyButton value={String(payment.amount)} />
               </dd>
             </div>
           </dl>
-          <p className="mt-2 text-xs text-brand-800">
+          <p className="mt-2 text-xs text-foreground">
             Sertakan kode <span className="font-mono font-semibold">{order.code}</span> pada berita
             transfer agar admin mudah memverifikasi.
           </p>
@@ -136,7 +136,7 @@ export function PaymentPanel({ order, phone }: PaymentPanelProps) {
       )}
 
       {uploadable && (
-        <div className="mt-4 border-t border-stone-100 pt-4">
+        <div className="mt-4 border-t border-border pt-4">
           <ProofUploadForm code={order.code} phone={phone} onUploaded={handleUploaded} />
         </div>
       )}

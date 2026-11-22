@@ -28,30 +28,30 @@ export function AccountPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-xl font-bold text-stone-900">Akun Saya</h1>
+      <h1 className="text-xl font-bold text-foreground">Akun Saya</h1>
 
       <Card title="Profil">
         <dl className="grid gap-3 text-sm sm:grid-cols-2">
           <div>
-            <dt className="text-stone-500">Nama</dt>
-            <dd className="font-medium text-stone-900">{user.name}</dd>
+            <dt className="text-muted-foreground">Nama</dt>
+            <dd className="font-medium text-foreground">{user.name}</dd>
           </div>
           <div>
-            <dt className="text-stone-500">Nomor HP</dt>
-            <dd className="font-medium text-stone-900">{user.phone}</dd>
+            <dt className="text-muted-foreground">Nomor HP</dt>
+            <dd className="font-medium text-foreground">{user.phone}</dd>
           </div>
           <div>
-            <dt className="text-stone-500">Email</dt>
-            <dd className="font-medium text-stone-900">{user.email || '—'}</dd>
+            <dt className="text-muted-foreground">Email</dt>
+            <dd className="font-medium text-foreground">{user.email || '—'}</dd>
           </div>
           <div>
-            <dt className="text-stone-500">Peran</dt>
-            <dd className="font-medium text-stone-900">{user.role}</dd>
+            <dt className="text-muted-foreground">Peran</dt>
+            <dd className="font-medium text-foreground">{user.role}</dd>
           </div>
           {user.created_at && (
             <div>
-              <dt className="text-stone-500">Terdaftar</dt>
-              <dd className="font-medium text-stone-900">{formatDateTime(user.created_at)}</dd>
+              <dt className="text-muted-foreground">Terdaftar</dt>
+              <dd className="font-medium text-foreground">{formatDateTime(user.created_at)}</dd>
             </div>
           )}
         </dl>
@@ -68,25 +68,25 @@ export function AccountPage() {
         {orders.data && (
           <>
             {rows.length === 0 ? (
-              <p className="text-sm text-stone-600">
+              <p className="text-sm text-muted-foreground">
                 Belum ada pesanan.{' '}
-                <Link to="/produk" className="font-medium text-brand-700 hover:underline">
+                <Link to="/produk" className="font-medium text-foreground hover:underline">
                   Mulai belanja
                 </Link>
                 .
               </p>
             ) : (
-              <ul className="flex flex-col divide-y divide-stone-100">
+              <ul className="flex flex-col divide-y divide-border">
                 {rows.map((o) => (
                   <li key={o.id} className="flex items-center justify-between gap-3 py-3">
                     <div>
                       <Link
                         to={`/pesanan/${o.code}`}
-                        className="font-mono font-medium text-brand-700 hover:underline"
+                        className="font-mono font-medium text-foreground hover:underline"
                       >
                         {o.code}
                       </Link>
-                      <p className="text-xs text-stone-500">{formatDateTime(o.created_at)}</p>
+                      <p className="text-xs text-muted-foreground">{formatDateTime(o.created_at)}</p>
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <span
@@ -94,7 +94,7 @@ export function AccountPage() {
                       >
                         {statusLabel(o.status)}
                       </span>
-                      <span className="text-sm text-stone-900">{formatIDR(o.total)}</span>
+                      <span className="text-sm text-foreground">{formatIDR(o.total)}</span>
                     </div>
                   </li>
                 ))}
@@ -102,14 +102,14 @@ export function AccountPage() {
             )}
 
             {totalPages > 1 && (
-              <div className="mt-4 flex items-center justify-between text-sm text-stone-600">
+              <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
                 <span>
                   Halaman {meta?.page ?? 1} dari {totalPages}
                 </span>
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    className="tap-target rounded-lg px-3 ring-1 ring-stone-300 disabled:opacity-40"
+                    className="tap-target rounded-lg px-3 ring-1 ring-border disabled:opacity-40"
                     disabled={page <= 1}
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                   >
@@ -117,7 +117,7 @@ export function AccountPage() {
                   </button>
                   <button
                     type="button"
-                    className="tap-target rounded-lg px-3 ring-1 ring-stone-300 disabled:opacity-40"
+                    className="tap-target rounded-lg px-3 ring-1 ring-border disabled:opacity-40"
                     disabled={page >= totalPages}
                     onClick={() => setPage((p) => p + 1)}
                   >

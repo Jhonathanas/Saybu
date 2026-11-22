@@ -1,5 +1,8 @@
 import type { InputHTMLAttributes } from 'react'
 import { forwardRef, useId } from 'react'
+import { Input as InputPrimitive } from './shadcn/input'
+import { Label } from './shadcn/label'
+import { cn } from '@/lib/utils'
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string
@@ -8,7 +11,7 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
-  { label, hint, error, id, className = '', ...rest },
+  { label, hint, error, id, className, ...rest },
   ref,
 ) {
   const generatedId = useId()
@@ -17,26 +20,22 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={inputId} className="text-sm font-medium text-stone-700">
-        {label}
-      </label>
-      <input
+      <Label htmlFor={inputId}>{label}</Label>
+      <InputPrimitive
         {...rest}
         id={inputId}
         ref={ref}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy}
-        className={`tap-target w-full rounded-lg border bg-white px-3 text-sm text-stone-900 placeholder:text-stone-400 ${
-          error ? 'border-red-400' : 'border-stone-300'
-        } ${className}`}
+        className={cn('tap-target', error && 'border-destructive', className)}
       />
       {hint && !error && (
-        <p id={`${inputId}-hint`} className="text-xs text-stone-500">
+        <p id={`${inputId}-hint`} className="text-xs text-muted-foreground">
           {hint}
         </p>
       )}
       {error && (
-        <p id={`${inputId}-error`} className="text-xs text-red-600">
+        <p id={`${inputId}-error`} className="text-xs text-destructive">
           {error}
         </p>
       )}

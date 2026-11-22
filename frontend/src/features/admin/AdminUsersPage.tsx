@@ -23,7 +23,7 @@ export function AdminUsersPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-bold text-stone-900">Pengguna</h1>
+      <h1 className="text-xl font-bold text-foreground">Pengguna</h1>
 
       <Card>
         <div className="max-w-sm">
@@ -50,7 +50,7 @@ export function AdminUsersPage() {
         <Card>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="text-xs uppercase text-stone-500">
+              <thead className="text-xs uppercase text-muted-foreground">
                 <tr>
                   <th className="py-2 pr-3">Nama</th>
                   <th className="py-2 pr-3">HP</th>
@@ -59,31 +59,31 @@ export function AdminUsersPage() {
                   <th className="py-2">Terdaftar</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-stone-100">
+              <tbody className="divide-y divide-border">
                 {data.data.map((u) => (
                   <tr key={u.id}>
-                    <td className="py-2 pr-3 font-medium text-stone-900">{u.name}</td>
+                    <td className="py-2 pr-3 font-medium text-foreground">{u.name}</td>
                     <td className="py-2 pr-3">{u.phone}</td>
                     <td className="py-2 pr-3">{u.email || '—'}</td>
                     <td className="py-2 pr-3">
                       <span
                         className={`rounded-full px-2 py-0.5 text-xs ${
                           u.role === 'admin'
-                            ? 'bg-brand-100 text-brand-800'
-                            : 'bg-stone-100 text-stone-600'
+                            ? 'bg-secondary text-foreground'
+                            : 'bg-muted text-muted-foreground'
                         }`}
                       >
                         {u.role}
                       </span>
                     </td>
-                    <td className="py-2 text-stone-500">
+                    <td className="py-2 text-muted-foreground">
                       {u.created_at ? formatDateTime(u.created_at) : '—'}
                     </td>
                   </tr>
                 ))}
                 {data.data.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="py-6 text-center text-stone-500">
+                    <td colSpan={5} className="py-6 text-center text-muted-foreground">
                       Tidak ada pengguna yang cocok.
                     </td>
                   </tr>
@@ -92,14 +92,14 @@ export function AdminUsersPage() {
             </table>
           </div>
 
-          <div className="mt-4 flex items-center justify-between text-sm text-stone-600">
+          <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
             <span>
               Halaman {meta?.page ?? 1} dari {totalPages} · total {meta?.total ?? 0}
             </span>
             <div className="flex gap-2">
               <button
                 type="button"
-                className="tap-target rounded-lg px-3 ring-1 ring-stone-300 disabled:opacity-40"
+                className="tap-target rounded-lg px-3 ring-1 ring-border disabled:opacity-40"
                 disabled={page <= 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
               >
@@ -107,7 +107,7 @@ export function AdminUsersPage() {
               </button>
               <button
                 type="button"
-                className="tap-target rounded-lg px-3 ring-1 ring-stone-300 disabled:opacity-40"
+                className="tap-target rounded-lg px-3 ring-1 ring-border disabled:opacity-40"
                 disabled={page >= totalPages}
                 onClick={() => setPage((p) => p + 1)}
               >

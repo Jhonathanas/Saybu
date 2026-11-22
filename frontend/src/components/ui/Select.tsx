@@ -1,5 +1,7 @@
 import type { SelectHTMLAttributes } from 'react'
 import { forwardRef, useId } from 'react'
+import { Label } from './shadcn/label'
+import { cn } from '@/lib/utils'
 
 interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   label: string
@@ -8,8 +10,12 @@ interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   options: { value: string; label: string }[]
 }
 
+/**
+ * Select native dengan token visual shadcn/ui. Native dipertahankan agar
+ * aksesibilitas & test (selectOptions) tetap bekerja; tampilan mengikuti Input.
+ */
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select(
-  { label, hint, error, options, id, className = '', ...rest },
+  { label, hint, error, options, id, className, ...rest },
   ref,
 ) {
   const generatedId = useId()
@@ -18,18 +24,20 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={selectId} className="text-sm font-medium text-stone-700">
-        {label}
-      </label>
+      <Label htmlFor={selectId}>{label}</Label>
       <select
         {...rest}
         id={selectId}
         ref={ref}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy}
-        className={`tap-target w-full rounded-lg border bg-white px-3 text-sm text-stone-900 ${
-          error ? 'border-red-400' : 'border-stone-300'
-        } ${className}`}
+        className={cn(
+          'tap-target w-full min-w-0 rounded-lg border border-input bg-background px-2.5 text-sm text-foreground',
+          'transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50',
+          'disabled:cursor-not-allowed disabled:opacity-50',
+          error && 'border-destructive',
+          className,
+        )}
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -38,12 +46,12 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
         ))}
       </select>
       {hint && !error && (
-        <p id={`${selectId}-hint`} className="text-xs text-stone-500">
+        <p id={`${selectId}-hint`} className="text-xs text-muted-foreground">
           {hint}
         </p>
       )}
       {error && (
-        <p id={`${selectId}-error`} className="text-xs text-red-600">
+        <p id={`${selectId}-error`} className="text-xs text-destructive">
           {error}
         </p>
       )}

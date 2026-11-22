@@ -32,8 +32,8 @@ export function OrderTrackingPage() {
   return (
     <div className="mx-auto flex max-w-md flex-col gap-6 py-4">
       <header>
-        <h1 className="text-xl font-bold text-stone-900">Lacak pesanan</h1>
-        <p className="mt-1 text-sm text-stone-500">
+        <h1 className="text-xl font-bold text-foreground">Lacak pesanan</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           Masukkan kode pesanan dan nomor HP yang dipakai saat memesan.
         </p>
       </header>

@@ -56,7 +56,7 @@ export function OrderDetailPage() {
     if (authLoading) return <Spinner />
     return (
       <div className="flex flex-col gap-4">
-        <h1 className="text-xl font-bold text-stone-900">Pesanan</h1>
+        <h1 className="text-xl font-bold text-foreground">Pesanan</h1>
         <Alert tone="info">
           Untuk melacak pesanan tanpa akun, masukkan kode pesanan dan nomor HP di{' '}
           <Link to="/pesanan" className="font-medium underline">
@@ -75,13 +75,13 @@ export function OrderDetailPage() {
     const notFound = err instanceof ApiError && err.status === 404
     return (
       <div className="flex flex-col gap-4">
-        <h1 className="text-xl font-bold text-stone-900">Pesanan</h1>
+        <h1 className="text-xl font-bold text-foreground">Pesanan</h1>
         <Alert tone="error">
           {notFound
             ? 'Pesanan tidak ditemukan atau nomor HP tidak cocok.'
             : 'Gagal memuat pesanan. Coba lagi.'}
         </Alert>
-        <Link to="/pesanan" className="text-sm font-medium text-brand-700 hover:underline">
+        <Link to="/pesanan" className="text-sm font-medium text-foreground hover:underline">
           ← Lacak pesanan lain
         </Link>
       </div>
@@ -98,7 +98,7 @@ export function OrderDetailPage() {
         </Alert>
       )}
 
-      <h1 className="text-xl font-bold text-stone-900">Detail pesanan</h1>
+      <h1 className="text-xl font-bold text-foreground">Detail pesanan</h1>
 
       <OrderDetailView
         order={order}
@@ -114,8 +114,8 @@ export function OrderDetailPage() {
       <PaymentPanel order={order} phone={phone} />
 
       {confirming && (
-        <div className="flex flex-col gap-3 rounded-2xl border border-red-200 bg-red-50 p-4">
-          <p className="text-sm text-red-800">
+        <div className="flex flex-col gap-3 rounded-2xl border border-destructive/30 bg-destructive/10 p-4">
+          <p className="text-sm text-destructive">
             Yakin ingin membatalkan pesanan ini? Stok akan dikembalikan.
           </p>
           <div className="flex gap-2">
@@ -129,7 +129,7 @@ export function OrderDetailPage() {
         </div>
       )}
 
-      <Link to="/pesanan" className="text-sm font-medium text-brand-700 hover:underline">
+      <Link to="/pesanan" className="text-sm font-medium text-foreground hover:underline">
         ← Lacak pesanan lain
       </Link>
     </div>

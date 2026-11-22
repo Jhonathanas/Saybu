@@ -1,19 +1,34 @@
 import type { ReactNode } from 'react'
+import {
+  Card as CardRoot,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from './shadcn/card'
+import { cn } from '@/lib/utils'
 
-export function Card({
-  title,
-  description,
-  children,
-}: {
+interface CardProps {
   title?: string
   description?: string
   children: ReactNode
-}) {
+  className?: string
+}
+
+/** Kompatibel dengan API lama; bagian kartu memakai primitives shadcn/ui. */
+export function Card({ title, description, children, className }: CardProps) {
+  const hasHeading = Boolean(title || description)
   return (
-    <section className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
-      {title && <h2 className="text-lg font-semibold text-stone-900">{title}</h2>}
-      {description && <p className="mt-1 text-sm text-stone-500">{description}</p>}
-      <div className={title || description ? 'mt-4' : ''}>{children}</div>
-    </section>
+    <CardRoot className={cn('shadow-sm', className)}>
+      {hasHeading && (
+        <CardHeader>
+          {title && <CardTitle>{title}</CardTitle>}
+          {description && <CardDescription>{description}</CardDescription>}
+        </CardHeader>
+      )}
+      <CardContent>{children}</CardContent>
+    </CardRoot>
   )
 }
+
+export { CardRoot, CardHeader, CardTitle, CardDescription, CardContent }

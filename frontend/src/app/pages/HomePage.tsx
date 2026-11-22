@@ -2,10 +2,16 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import { Card } from '@/components/ui/Card'
 import { Alert, Spinner } from '@/components/ui/Feedback'
+import { CategoryTile } from '@/features/catalog/CategoryTile'
 import { ProductCard } from '@/features/catalog/ProductCard'
 import { listCategories, listProducts } from '@/features/catalog/api'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { usePageTitle } from '@/lib/seo'
+
+const categoryImages: Record<string, string> = {
+  buah: '/images/kategori-buah.webp',
+  sayur: '/images/kategori-sayur.webp',
+}
 
 export function HomePage() {
   const { user } = useAuth()
@@ -17,25 +23,61 @@ export function HomePage() {
     queryFn: () => listProducts({ page: 1, limit: 6, sort: 'newest' }),
   })
 
+  const quickLinks = [
+    {
+      id: 'all',
+      name: 'Semua',
+      slug: 'semua',
+      sort: 0,
+      to: '/produk',
+      image: '/images/kategori-semua.webp',
+    },
+    ...(categories.data ?? []).map((c) => ({
+      ...c,
+      to: `/produk?category=${encodeURIComponent(c.slug)}`,
+      image: categoryImages[c.slug] ?? '/images/kategori-semua.webp',
+    })),
+    {
+      id: 'hemat',
+      name: 'Hemat',
+      slug: 'hemat',
+      sort: 99,
+      to: '/produk?sort=price_asc',
+      image: '/images/kategori-hemat.webp',
+    },
+  ]
+
   return (
-    <div className="flex flex-col gap-6">
-      <section className="rounded-2xl bg-brand-600 px-6 py-10 text-white">
-        <h1 className="text-2xl font-bold sm:text-3xl">Buah & sayur segar, antar ke rumah</h1>
-        <p className="mt-2 max-w-xl text-sm text-brand-50">
-          Pesan dari rumah, bayar dengan transfer bank atau COD. Dikonfirmasi langsung oleh
-          penjual lewat WhatsApp.
+    <div className="flex flex-col gap-5">
+      <section
+        className="relative overflow-hidden rounded-3xl bg-foreground px-5 py-8 text-background sm:px-8 sm:py-12"
+        style={{
+          backgroundImage:
+            'linear-gradient(90deg, color-mix(in oklab, var(--foreground) 94%, transparent) 0%, color-mix(in oklab, var(--foreground) 70%, transparent) 55%, color-mix(in oklab, var(--foreground) 25%, transparent) 100%), url(/images/hero-sayur.webp)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      >
+        <span className="inline-flex rounded-full bg-background px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-foreground">
+          Panen pagi ini
+        </span>
+        <h1 className="mt-3 max-w-md text-2xl font-extrabold leading-tight sm:text-4xl">
+          Buah &amp; sayur segar, langsung ke dapurmu
+        </h1>
+        <p className="mt-2 max-w-md text-sm text-background/80">
+          Pesan dari rumah, bayar transfer atau COD. Dikonfirmasi penjual lewat WhatsApp.
         </p>
-        <div className="mt-5 flex flex-wrap gap-3">
+        <div className="mt-5 flex flex-wrap gap-2.5">
           <Link
             to="/produk"
-            className="tap-target inline-flex items-center rounded-lg bg-white px-4 text-sm font-semibold text-brand-700 hover:bg-brand-50"
+            className="tap-target inline-flex items-center rounded-xl bg-background px-5 text-sm font-bold text-foreground hover:bg-muted"
           >
             Lihat produk
           </Link>
           {!user && (
             <Link
               to="/daftar"
-              className="tap-target inline-flex items-center rounded-lg bg-brand-700 px-4 text-sm font-semibold text-white hover:bg-brand-800"
+              className="tap-target inline-flex items-center rounded-xl border border-background/40 px-5 text-sm font-bold text-background hover:bg-background/10"
             >
               Daftar akun
             </Link>
@@ -43,24 +85,28 @@ export function HomePage() {
         </div>
       </section>
 
-      {categories.data && categories.data.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {categories.data.map((c) => (
-            <Link
-              key={c.id}
-              to={`/produk?category=${c.slug}`}
-              className="tap-target inline-flex items-center rounded-full border border-stone-300 bg-white px-4 text-sm text-stone-700 hover:bg-stone-100"
-            >
-              {c.name}
-            </Link>
+      <section aria-labelledby="belanja-cepat">
+        <h2 id="belanja-cepat" className="mb-2 text-base font-bold text-foreground">
+          Belanja cepat
+        </h2>
+        <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
+          {quickLinks.map((item) => (
+            <CategoryTile
+              key={item.id}
+              category={{ id: item.id, name: item.name, slug: item.slug, sort: item.sort }}
+              image={item.image}
+              to={item.to}
+            />
           ))}
         </div>
-      )}
+      </section>
 
-      <section className="flex flex-col gap-3">
+      <section aria-labelledby="produk-terbaru" className="flex flex-col gap-3">
         <div className="flex items-baseline justify-between">
-          <h2 className="text-lg font-semibold text-stone-900">Produk terbaru</h2>
-          <Link to="/produk" className="text-sm text-brand-700 hover:underline">
+          <h2 id="produk-terbaru" className="text-lg font-bold text-foreground">
+            Produk terbaru
+          </h2>
+          <Link to="/produk" className="text-sm font-semibold text-foreground hover:underline">
             Lihat semua
           </Link>
         </div>
@@ -68,7 +114,7 @@ export function HomePage() {
         {featured.isLoading && <Spinner label="Memuat produk…" />}
         {featured.isError && <Alert tone="error">Gagal memuat produk.</Alert>}
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-3">
           {(featured.data?.data ?? []).map((p) => (
             <ProductCard key={p.id} product={p} />
           ))}
@@ -77,16 +123,16 @@ export function HomePage() {
 
       {user && (
         <Card title={`Halo, ${user.name}`}>
-          <p className="text-sm text-stone-600">
+          <p className="text-sm text-muted-foreground">
             Anda masuk sebagai <strong>{user.role}</strong>.{' '}
-            <Link to="/akun" className="text-brand-700 hover:underline">
+            <Link to="/akun" className="text-foreground hover:underline">
               Lihat profil
             </Link>
             {user.role === 'admin' && (
               <>
                 {' '}
                 atau buka{' '}
-                <Link to="/admin" className="text-brand-700 hover:underline">
+                <Link to="/admin" className="text-foreground hover:underline">
                   panel admin
                 </Link>
                 .

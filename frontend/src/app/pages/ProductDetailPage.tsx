@@ -46,7 +46,7 @@ export function ProductDetailPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <Link to="/produk" className="text-sm text-brand-700 hover:underline">
+      <Link to="/produk" className="text-sm text-foreground hover:underline">
         ← Kembali ke daftar produk
       </Link>
 
@@ -55,7 +55,7 @@ export function ProductDetailPage() {
           <ProductImage
             src={product.images[activeImage]}
             alt={product.name}
-            className="h-64 w-full rounded-2xl border border-stone-200 sm:h-80"
+            className="h-64 w-full rounded-2xl border border-border sm:h-80"
           />
           {product.images.length > 1 && (
             <div className="flex gap-2">
@@ -66,7 +66,7 @@ export function ProductDetailPage() {
                   onClick={() => setActiveImage(i)}
                   aria-label={`Lihat foto ${i + 1}`}
                   className={`overflow-hidden rounded-lg border ${
-                    i === activeImage ? 'border-brand-600' : 'border-stone-200'
+                    i === activeImage ? 'border-foreground' : 'border-border'
                   }`}
                 >
                   <ProductImage src={url} alt={`${product.name} ${i + 1}`} className="size-16" />
@@ -78,18 +78,18 @@ export function ProductDetailPage() {
 
         <div className="flex flex-col gap-4">
           {product.category && (
-            <span className="w-fit rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700">
+            <span className="w-fit rounded-full bg-muted px-3 py-1 text-xs font-medium text-foreground">
               {product.category.name}
             </span>
           )}
-          <h1 className="text-2xl font-bold text-stone-900">{product.name}</h1>
-          <p className="text-2xl font-bold text-brand-700">
+          <h1 className="text-2xl font-bold text-foreground">{product.name}</h1>
+          <p className="text-2xl font-bold text-foreground">
             {formatIDR(product.price)}
-            <span className="text-sm font-normal text-stone-500"> / {product.unit}</span>
+            <span className="text-sm font-normal text-muted-foreground"> / {product.unit}</span>
           </p>
-          <p className="text-sm text-stone-600">{product.description || 'Belum ada deskripsi.'}</p>
+          <p className="text-sm text-muted-foreground">{product.description || 'Belum ada deskripsi.'}</p>
 
-          <p className="text-sm text-stone-600">
+          <p className="text-sm text-muted-foreground">
             {product.is_available
               ? `Stok tersedia: ${formatQty(product.unit, product.stock)}`
               : 'Stok sedang habis.'}
@@ -113,9 +113,9 @@ export function ProductDetailPage() {
               Tambah ke keranjang
             </Button>
             {line && (
-              <p className="text-sm text-stone-600">
+              <p className="text-sm text-muted-foreground">
                 Di keranjang: {formatQty(product.unit, line.qty)}.{' '}
-                <Link to="/keranjang" className="text-brand-700 hover:underline">
+                <Link to="/keranjang" className="text-foreground hover:underline">
                   Lihat keranjang
                 </Link>
               </p>

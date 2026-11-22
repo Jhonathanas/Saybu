@@ -190,7 +190,7 @@ export function CheckoutPage() {
   if (lines.length === 0) {
     return (
       <div className="flex flex-col gap-4">
-        <h1 className="text-xl font-bold text-stone-900">Checkout</h1>
+        <h1 className="text-xl font-bold text-foreground">Checkout</h1>
         <Alert tone="info">
           Keranjang kosong.{' '}
           <Link to="/produk" className="font-medium underline">
@@ -212,7 +212,7 @@ export function CheckoutPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <h1 className="text-xl font-bold text-stone-900">Checkout</h1>
+      <h1 className="text-xl font-bold text-foreground">Checkout</h1>
 
       {formError && <Alert tone="error">{formError}</Alert>}
       {zonesQuery.isError && (
@@ -221,8 +221,8 @@ export function CheckoutPage() {
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid gap-5 lg:grid-cols-[1fr_20rem]">
         <div className="flex flex-col gap-5">
-          <section className="rounded-2xl border border-stone-200 bg-white p-4">
-            <h2 className="font-semibold text-stone-900">Data pembeli</h2>
+          <section className="rounded-2xl border border-border bg-card p-4">
+            <h2 className="font-semibold text-foreground">Data pembeli</h2>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <Input label="Nama" error={errors.name?.message} {...register('name')} />
               <Input
@@ -246,8 +246,8 @@ export function CheckoutPage() {
             </div>
           </section>
 
-          <section className="rounded-2xl border border-stone-200 bg-white p-4">
-            <h2 className="font-semibold text-stone-900">Pengiriman</h2>
+          <section className="rounded-2xl border border-border bg-card p-4">
+            <h2 className="font-semibold text-foreground">Pengiriman</h2>
             <div className="mt-3 flex flex-col gap-3">
               <div role="radiogroup" aria-label="Cara pengiriman" className="grid gap-2 sm:grid-cols-2">
                 {(
@@ -260,14 +260,14 @@ export function CheckoutPage() {
                     key={opt.value}
                     className={`tap-target flex cursor-pointer items-center gap-2 rounded-lg border px-3 text-sm ${
                       fulfillment === opt.value
-                        ? 'border-brand-500 bg-brand-50 text-brand-800'
-                        : 'border-stone-300 bg-white text-stone-700'
+                        ? 'border-foreground bg-muted text-foreground'
+                        : 'border-border bg-card text-foreground'
                     }`}
                   >
                     <input
                       type="radio"
                       value={opt.value}
-                      className="accent-brand-600"
+                      className="accent-foreground"
                       {...register('fulfillment')}
                     />
                     {opt.label}
@@ -312,8 +312,8 @@ export function CheckoutPage() {
             </div>
           </section>
 
-          <section className="rounded-2xl border border-stone-200 bg-white p-4">
-            <h2 className="font-semibold text-stone-900">Metode pembayaran</h2>
+          <section className="rounded-2xl border border-border bg-card p-4">
+            <h2 className="font-semibold text-foreground">Metode pembayaran</h2>
             <div role="radiogroup" aria-label="Metode pembayaran" className="mt-3 grid gap-2 sm:grid-cols-2">
               {(
                 [
@@ -325,20 +325,20 @@ export function CheckoutPage() {
                   key={opt.value}
                   className={`tap-target flex cursor-pointer flex-col justify-center rounded-lg border px-3 py-2 text-sm ${
                     watch('payment_method') === opt.value
-                      ? 'border-brand-500 bg-brand-50 text-brand-800'
-                      : 'border-stone-300 bg-white text-stone-700'
+                      ? 'border-foreground bg-muted text-foreground'
+                      : 'border-border bg-card text-foreground'
                   }`}
                 >
                   <span className="flex items-center gap-2 font-medium">
                     <input
                       type="radio"
                       value={opt.value}
-                      className="accent-brand-600"
+                      className="accent-foreground"
                       {...register('payment_method')}
                     />
                     {opt.label}
                   </span>
-                  <span className="pl-6 text-xs text-stone-500">{opt.hint}</span>
+                  <span className="pl-6 text-xs text-muted-foreground">{opt.hint}</span>
                 </label>
               ))}
             </div>
@@ -346,29 +346,29 @@ export function CheckoutPage() {
         </div>
 
         <aside className="lg:sticky lg:top-20 lg:self-start">
-          <div className="flex flex-col gap-3 rounded-2xl border border-stone-200 bg-white p-4">
-            <h2 className="font-semibold text-stone-900">Ringkasan pesanan</h2>
-            <ul className="flex flex-col divide-y divide-stone-100">
+          <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4">
+            <h2 className="font-semibold text-foreground">Ringkasan pesanan</h2>
+            <ul className="flex flex-col divide-y divide-border">
               {lines.map((line) => (
                 <li key={line.productId} className="flex items-start justify-between gap-3 py-2">
                   <div>
-                    <p className="text-sm font-medium text-stone-900">{line.name}</p>
-                    <p className="text-xs text-stone-500">
+                    <p className="text-sm font-medium text-foreground">{line.name}</p>
+                    <p className="text-xs text-muted-foreground">
                       {formatQty(line.unit, line.qty)} × {formatIDR(line.price)}
                     </p>
                   </div>
-                  <p className="text-sm font-medium text-stone-900">{formatIDR(lineTotal(line))}</p>
+                  <p className="text-sm font-medium text-foreground">{formatIDR(lineTotal(line))}</p>
                 </li>
               ))}
             </ul>
-            <dl className="flex flex-col gap-1.5 border-t border-stone-100 pt-3 text-sm">
+            <dl className="flex flex-col gap-1.5 border-t border-border pt-3 text-sm">
               <div className="flex justify-between">
-                <dt className="text-stone-500">Subtotal</dt>
-                <dd className="text-stone-900">{formatIDR(subtotal)}</dd>
+                <dt className="text-muted-foreground">Subtotal</dt>
+                <dd className="text-foreground">{formatIDR(subtotal)}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-stone-500">Ongkir</dt>
-                <dd className="text-stone-900">
+                <dt className="text-muted-foreground">Ongkir</dt>
+                <dd className="text-foreground">
                   {!delivery
                     ? 'Rp0'
                     : quoteQuery.isFetching
@@ -378,7 +378,7 @@ export function CheckoutPage() {
                         : formatIDR(shippingFee)}
                 </dd>
               </div>
-              <div className="flex justify-between text-base font-bold text-stone-900">
+              <div className="flex justify-between text-base font-bold text-foreground">
                 <dt>Total</dt>
                 <dd>{formatIDR(total)}</dd>
               </div>
@@ -386,7 +386,7 @@ export function CheckoutPage() {
             <Button type="submit" loading={isSubmitting} className="w-full">
               Buat pesanan
             </Button>
-            <p className="text-center text-xs text-stone-500">
+            <p className="text-center text-xs text-muted-foreground">
               Harga & stok dihitung ulang oleh server saat pesanan dibuat.
             </p>
           </div>

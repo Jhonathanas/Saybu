@@ -160,7 +160,7 @@ export function AdminProductsPage() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-stone-900">Produk</h1>
+        <h1 className="text-xl font-bold text-foreground">Produk</h1>
         <Button onClick={openCreate}>Tambah produk</Button>
       </div>
 
@@ -229,7 +229,7 @@ export function AdminProductsPage() {
         <Card>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="text-xs uppercase text-stone-500">
+              <thead className="text-xs uppercase text-muted-foreground">
                 <tr>
                   <th className="py-2 pr-3">Nama</th>
                   <th className="py-2 pr-3">Kategori</th>
@@ -239,25 +239,25 @@ export function AdminProductsPage() {
                   <th className="py-2">Aksi</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-stone-100">
+              <tbody className="divide-y divide-border">
                 {products.data.data.map((p) => (
                   <tr key={p.id} className={p.is_active ? '' : 'opacity-60'}>
-                    <td className="py-2 pr-3 font-medium text-stone-900">
+                    <td className="py-2 pr-3 font-medium text-foreground">
                       {p.name}
-                      <span className="block text-xs font-normal text-stone-400">/{p.slug}</span>
+                      <span className="block text-xs font-normal text-muted-foreground">/{p.slug}</span>
                     </td>
                     <td className="py-2 pr-3">{p.category?.name ?? '—'}</td>
                     <td className="py-2 pr-3 whitespace-nowrap">
                       {formatIDR(p.price)}
-                      <span className="text-xs text-stone-400"> / {p.unit}</span>
+                      <span className="text-xs text-muted-foreground"> / {p.unit}</span>
                     </td>
                     <td className="py-2 pr-3 whitespace-nowrap">{formatQty(p.unit, p.stock_qty)}</td>
                     <td className="py-2 pr-3">
                       <span
                         className={`rounded-full px-2 py-0.5 text-xs ${
                           p.is_active
-                            ? 'bg-brand-100 text-brand-800'
-                            : 'bg-stone-100 text-stone-600'
+                            ? 'bg-secondary text-foreground'
+                            : 'bg-muted text-muted-foreground'
                         }`}
                       >
                         {p.is_active ? 'aktif' : 'nonaktif'}
@@ -267,14 +267,14 @@ export function AdminProductsPage() {
                       <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
-                          className="tap-target rounded-lg px-2 ring-1 ring-stone-300 hover:bg-stone-100"
+                          className="tap-target rounded-lg px-2 ring-1 ring-border hover:bg-muted"
                           onClick={() => openEdit(p)}
                         >
                           Ubah
                         </button>
                         <button
                           type="button"
-                          className="tap-target rounded-lg px-2 ring-1 ring-stone-300 hover:bg-stone-100"
+                          className="tap-target rounded-lg px-2 ring-1 ring-border hover:bg-muted"
                           onClick={() => {
                             setStockTarget(p)
                             setCreating(false)
@@ -285,7 +285,7 @@ export function AdminProductsPage() {
                         {p.is_active && (
                           <button
                             type="button"
-                            className="tap-target rounded-lg px-2 text-red-600 ring-1 ring-red-200 hover:bg-red-50"
+                            className="tap-target rounded-lg px-2 text-destructive ring-1 ring-destructive/20 hover:bg-destructive/10"
                             onClick={() => {
                               if (confirm(`Nonaktifkan ${p.name}?`)) remove.mutate(p.id)
                             }}
@@ -299,7 +299,7 @@ export function AdminProductsPage() {
                 ))}
                 {products.data.data.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="py-6 text-center text-stone-500">
+                    <td colSpan={6} className="py-6 text-center text-muted-foreground">
                       Belum ada produk.
                     </td>
                   </tr>
@@ -308,14 +308,14 @@ export function AdminProductsPage() {
             </table>
           </div>
 
-          <div className="mt-4 flex items-center justify-between text-sm text-stone-600">
+          <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
             <span>
               Halaman {meta?.page ?? 1} dari {totalPages} · total {meta?.total ?? 0}
             </span>
             <div className="flex gap-2">
               <button
                 type="button"
-                className="tap-target rounded-lg px-3 ring-1 ring-stone-300 disabled:opacity-40"
+                className="tap-target rounded-lg px-3 ring-1 ring-border disabled:opacity-40"
                 disabled={page <= 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
               >
@@ -323,7 +323,7 @@ export function AdminProductsPage() {
               </button>
               <button
                 type="button"
-                className="tap-target rounded-lg px-3 ring-1 ring-stone-300 disabled:opacity-40"
+                className="tap-target rounded-lg px-3 ring-1 ring-border disabled:opacity-40"
                 disabled={page >= totalPages}
                 onClick={() => setPage((p) => p + 1)}
               >
@@ -446,7 +446,7 @@ function ProductForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="deskripsi" className="text-sm font-medium text-stone-700">
+        <label htmlFor="deskripsi" className="text-sm font-medium text-foreground">
           Deskripsi
         </label>
         <textarea
@@ -454,11 +454,11 @@ function ProductForm({
           rows={3}
           value={form.description}
           onChange={(e) => set('description', e.target.value)}
-          className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900"
+          className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground"
         />
       </div>
 
-      <label className="flex items-center gap-2 text-sm text-stone-700">
+      <label className="flex items-center gap-2 text-sm text-foreground">
         <input
           type="checkbox"
           className="size-4"
@@ -469,16 +469,16 @@ function ProductForm({
       </label>
 
       <div className="flex flex-col gap-2">
-        <span className="text-sm font-medium text-stone-700">Gambar</span>
+        <span className="text-sm font-medium text-foreground">Gambar</span>
         {form.images.length > 0 && (
           <ul className="flex flex-wrap gap-2">
             {form.images.map((url) => (
               <li key={url} className="relative">
-                <img src={url} alt="" className="size-20 rounded-lg border border-stone-200 object-cover" />
+                <img src={url} alt="" className="size-20 rounded-lg border border-border object-cover" />
                 <button
                   type="button"
                   aria-label="Hapus gambar"
-                  className="absolute -right-2 -top-2 grid size-6 place-items-center rounded-full bg-red-600 text-xs text-white"
+                  className="absolute -right-2 -top-2 grid size-6 place-items-center rounded-full bg-destructive text-xs text-background"
                   onClick={() =>
                     setForm((prev) => ({
                       ...prev,
@@ -503,8 +503,8 @@ function ProductForm({
           }}
           className="text-sm"
         />
-        {uploading && <p className="text-xs text-stone-500">Mengunggah…</p>}
-        {uploadError && <p className="text-xs text-red-600">{uploadError}</p>}
+        {uploading && <p className="text-xs text-muted-foreground">Mengunggah…</p>}
+        {uploadError && <p className="text-xs text-destructive">{uploadError}</p>}
       </div>
 
       <div className="flex gap-2">
@@ -550,7 +550,7 @@ function StockForm({ product, onDone, onCancel }: StockFormProps) {
     >
       {error && <Alert tone="error">{error}</Alert>}
 
-      <p className="text-sm text-stone-600">
+      <p className="text-sm text-muted-foreground">
         Stok saat ini: <strong>{formatQty(product.unit, product.stock_qty)}</strong>
       </p>
 

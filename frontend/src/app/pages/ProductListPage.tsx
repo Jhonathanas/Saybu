@@ -53,14 +53,14 @@ export function ProductListPage() {
   const totalPages = meta?.total_pages ?? 1
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-xl font-bold text-stone-900">Produk</h1>
-        <p className="text-sm text-stone-500">Buah dan sayur segar, dikirim dari pasar pagi ini.</p>
+        <h1 className="text-xl font-extrabold text-foreground">Produk</h1>
+        <p className="text-sm text-muted-foreground">Buah dan sayur segar, dikirim dari pasar pagi ini.</p>
       </div>
 
       <form
-        className="flex flex-col gap-3 sm:flex-row sm:items-end"
+        className="sticky top-16 z-10 flex flex-col gap-2 rounded-2xl border border-border bg-card/95 p-3 shadow-sm backdrop-blur sm:flex-row sm:items-end"
         onSubmit={(e) => {
           e.preventDefault()
           update({ q: search })
@@ -74,7 +74,7 @@ export function ProductListPage() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <div className="sm:w-48">
+        <div className="sm:w-44">
           <Select
             label="Urutkan"
             value={sort}
@@ -87,14 +87,14 @@ export function ProductListPage() {
         </Button>
       </form>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
         <button
           type="button"
           onClick={() => update({ category: '' })}
-          className={`tap-target rounded-full border px-3 text-sm ${
+          className={`tap-target shrink-0 rounded-full border px-4 text-sm font-medium ${
             category === ''
-              ? 'border-brand-600 bg-brand-50 text-brand-700'
-              : 'border-stone-300 bg-white text-stone-600 hover:bg-stone-100'
+              ? 'border-foreground bg-muted text-foreground'
+              : 'border-border bg-card text-muted-foreground hover:bg-muted'
           }`}
         >
           Semua
@@ -104,10 +104,10 @@ export function ProductListPage() {
             key={c.id}
             type="button"
             onClick={() => update({ category: c.slug })}
-            className={`tap-target rounded-full border px-3 text-sm ${
+            className={`tap-target shrink-0 rounded-full border px-4 text-sm font-medium ${
               category === c.slug
-                ? 'border-brand-600 bg-brand-50 text-brand-700'
-                : 'border-stone-300 bg-white text-stone-600 hover:bg-stone-100'
+                ? 'border-foreground bg-muted text-foreground'
+                : 'border-border bg-card text-muted-foreground hover:bg-muted'
             }`}
           >
             {c.name}
@@ -127,7 +127,7 @@ export function ProductListPage() {
         <Alert tone="info">Tidak ada produk yang cocok. Coba kata kunci lain.</Alert>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {(products.data?.data ?? []).map((p) => (
           <ProductCard key={p.id} product={p} />
         ))}
@@ -143,7 +143,7 @@ export function ProductListPage() {
           >
             Sebelumnya
           </Button>
-          <span className="text-sm text-stone-500">
+          <span className="text-sm text-muted-foreground">
             Halaman {page} dari {totalPages}
           </span>
           <Button

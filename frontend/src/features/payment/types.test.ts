@@ -18,10 +18,11 @@ describe('payment types', () => {
     expect(paymentStatusLabel('NOPE')).toBe('NOPE')
   })
 
-  it('memberi kelas badge sesuai nada status', () => {
-    expect(paymentStatusBadgeClass('PAID')).toContain('brand')
-    expect(paymentStatusBadgeClass('REJECTED')).toContain('red')
-    expect(paymentStatusBadgeClass('UNKNOWN')).toContain('amber')
+  it('memberi kelas badge token shadcn sesuai nada status', () => {
+    expect(paymentStatusBadgeClass('PAID')).toContain('bg-foreground')
+    expect(paymentStatusBadgeClass('REJECTED')).toContain('text-destructive')
+    expect(paymentStatusBadgeClass('UNKNOWN')).toContain('bg-muted')
+    expect(paymentStatusBadgeClass('CANCELLED')).toContain('text-muted-foreground')
   })
 
   it('mengizinkan unggah bukti hanya saat UNPAID atau REJECTED', () => {

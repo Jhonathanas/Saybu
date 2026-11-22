@@ -63,7 +63,7 @@ export function AdminPaymentsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-bold text-stone-900">Pembayaran</h1>
+      <h1 className="text-xl font-bold text-foreground">Pembayaran</h1>
 
       <Card>
         <div className="max-w-sm">
@@ -90,7 +90,7 @@ export function AdminPaymentsPage() {
         <Card>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="text-xs uppercase text-stone-500">
+              <thead className="text-xs uppercase text-muted-foreground">
                 <tr>
                   <th className="py-2 pr-3">Kode</th>
                   <th className="py-2 pr-3">Pelanggan</th>
@@ -101,7 +101,7 @@ export function AdminPaymentsPage() {
                   <th className="py-2">Aksi</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-stone-100">
+              <tbody className="divide-y divide-border">
                 {rows.map((p) => (
                   <PaymentRow
                     key={p.id}
@@ -115,7 +115,7 @@ export function AdminPaymentsPage() {
                 ))}
                 {rows.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="py-6 text-center text-stone-500">
+                    <td colSpan={7} className="py-6 text-center text-muted-foreground">
                       Tidak ada pembayaran pada status ini.
                     </td>
                   </tr>
@@ -124,14 +124,14 @@ export function AdminPaymentsPage() {
             </table>
           </div>
 
-          <div className="mt-4 flex items-center justify-between text-sm text-stone-600">
+          <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
             <span>
               Halaman {meta?.page ?? 1} dari {totalPages} · total {meta?.total ?? 0}
             </span>
             <div className="flex gap-2">
               <button
                 type="button"
-                className="tap-target rounded-lg px-3 ring-1 ring-stone-300 disabled:opacity-40"
+                className="tap-target rounded-lg px-3 ring-1 ring-border disabled:opacity-40"
                 disabled={page <= 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
               >
@@ -139,7 +139,7 @@ export function AdminPaymentsPage() {
               </button>
               <button
                 type="button"
-                className="tap-target rounded-lg px-3 ring-1 ring-stone-300 disabled:opacity-40"
+                className="tap-target rounded-lg px-3 ring-1 ring-border disabled:opacity-40"
                 disabled={page >= totalPages}
                 onClick={() => setPage((p) => p + 1)}
               >
@@ -176,13 +176,13 @@ function PaymentRow({
   return (
     <>
       <tr>
-        <td className="py-2 pr-3 font-mono font-medium text-stone-900">{payment.order_code}</td>
+        <td className="py-2 pr-3 font-mono font-medium text-foreground">{payment.order_code}</td>
         <td className="py-2 pr-3">
-          <span className="block text-stone-900">{payment.customer_name || '—'}</span>
-          <span className="block text-xs text-stone-500">{payment.customer_phone || '—'}</span>
+          <span className="block text-foreground">{payment.customer_name || '—'}</span>
+          <span className="block text-xs text-muted-foreground">{payment.customer_phone || '—'}</span>
         </td>
         <td className="py-2 pr-3">{payment.method}</td>
-        <td className="py-2 pr-3 text-stone-900">{formatIDR(payment.amount)}</td>
+        <td className="py-2 pr-3 text-foreground">{formatIDR(payment.amount)}</td>
         <td className="py-2 pr-3">
           <span
             className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${paymentStatusBadgeClass(payment.status)}`}
@@ -196,15 +196,15 @@ function PaymentRow({
               href={payment.proof_url}
               target="_blank"
               rel="noreferrer"
-              className="font-medium text-brand-700 hover:underline"
+              className="font-medium text-foreground hover:underline"
             >
               Lihat bukti
             </a>
           ) : (
-            <span className="text-stone-400">—</span>
+            <span className="text-muted-foreground">—</span>
           )}
           {payment.uploaded_at && (
-            <span className="block text-xs text-stone-500">
+            <span className="block text-xs text-muted-foreground">
               {formatDateTime(payment.uploaded_at)}
             </span>
           )}
@@ -224,24 +224,24 @@ function PaymentRow({
               </Button>
             </div>
           ) : (
-            <span className="text-stone-400">—</span>
+            <span className="text-muted-foreground">—</span>
           )}
         </td>
       </tr>
       {isRejecting && (
         <tr>
-          <td colSpan={7} className="bg-red-50 py-3">
+          <td colSpan={7} className="bg-destructive/10 py-3">
             <div className="flex flex-col gap-2">
               <label
                 htmlFor={`reject-${payment.id}`}
-                className="text-sm font-medium text-red-800"
+                className="text-sm font-medium text-destructive"
               >
                 Alasan penolakan (dikirim ke pelanggan)
               </label>
               <textarea
                 id={`reject-${payment.id}`}
                 rows={2}
-                className="tap-target w-full rounded-lg border border-red-300 bg-white px-3 py-2 text-sm text-stone-900"
+                className="tap-target w-full rounded-lg border border-destructive/30 bg-card px-3 py-2 text-sm text-foreground"
                 value={rejecting.note}
                 onChange={(e) => onReject({ id: payment.id, note: e.target.value })}
               />

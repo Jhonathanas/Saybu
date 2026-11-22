@@ -1,7 +1,27 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router'
 import { Button } from '@/components/ui/Button'
+import { BottomNav } from '@/components/ui/BottomNav'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { useCart } from '@/features/cart/store'
+
+function SearchIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-5" aria-hidden="true">
+      <circle cx="11" cy="11" r="6.5" />
+      <path d="m16 16 4 4" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function CartIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-5" aria-hidden="true">
+      <path d="M3 4h2l2.2 10.5h9.6L20 7H6" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="9" cy="19" r="1.4" />
+      <circle cx="17" cy="19" r="1.4" />
+    </svg>
+  )
+}
 
 export function StoreLayout() {
   const { user, logout } = useAuth()
@@ -13,20 +33,53 @@ export function StoreLayout() {
     navigate('/')
   }
 
+  const cartLabel = cartCount > 0 ? `Keranjang, ${cartCount} jenis produk` : 'Keranjang'
+
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-10 border-b border-stone-200 bg-white/95 backdrop-blur">
+      <header className="sticky top-0 z-10 border-b border-border bg-card/95 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
-          <Link to="/" className="text-lg font-bold text-brand-700">
-            Saybu
+          <Link to="/" className="text-lg font-extrabold text-foreground">
+            Saybu<span className="text-foreground">.</span>
           </Link>
 
-          <nav className="flex items-center gap-1 text-sm">
+          {/* Mobile: hanya logo + akses cepat; navigasi lengkap ada di BottomNav. */}
+          <nav className="flex items-center gap-1 sm:hidden">
+            <NavLink
+              to="/produk"
+              aria-label="Cari produk"
+              className={({ isActive }) =>
+                `tap-target inline-flex items-center rounded-lg px-2 ${
+                  isActive ? 'text-foreground' : 'text-muted-foreground'
+                }`
+              }
+            >
+              <SearchIcon />
+            </NavLink>
+            <NavLink
+              to="/keranjang"
+              aria-label={cartLabel}
+              className={({ isActive }) =>
+                `tap-target relative inline-flex items-center rounded-lg px-2 ${
+                  isActive ? 'text-foreground' : 'text-muted-foreground'
+                }`
+              }
+            >
+              <CartIcon />
+              {cartCount > 0 && (
+                <span className="absolute right-0 top-0 inline-flex min-w-4 items-center justify-center rounded-full bg-foreground px-1 text-[10px] font-semibold leading-4 text-background">
+                  {cartCount}
+                </span>
+              )}
+            </NavLink>
+          </nav>
+
+          <nav className="hidden items-center gap-1 text-sm sm:flex">
             <NavLink
               to="/"
               className={({ isActive }) =>
                 `tap-target inline-flex items-center rounded-lg px-3 ${
-                  isActive ? 'text-brand-700' : 'text-stone-600 hover:bg-stone-100'
+                  isActive ? 'text-foreground' : 'text-muted-foreground hover:bg-muted'
                 }`
               }
             >
@@ -37,7 +90,7 @@ export function StoreLayout() {
               to="/produk"
               className={({ isActive }) =>
                 `tap-target inline-flex items-center rounded-lg px-3 ${
-                  isActive ? 'text-brand-700' : 'text-stone-600 hover:bg-stone-100'
+                  isActive ? 'text-foreground' : 'text-muted-foreground hover:bg-muted'
                 }`
               }
             >
@@ -46,18 +99,16 @@ export function StoreLayout() {
 
             <NavLink
               to="/keranjang"
-              aria-label={
-                cartCount > 0 ? `Keranjang, ${cartCount} jenis produk` : 'Keranjang'
-              }
+              aria-label={cartLabel}
               className={({ isActive }) =>
                 `tap-target relative inline-flex items-center rounded-lg px-3 ${
-                  isActive ? 'text-brand-700' : 'text-stone-600 hover:bg-stone-100'
+                  isActive ? 'text-foreground' : 'text-muted-foreground hover:bg-muted'
                 }`
               }
             >
               Keranjang
               {cartCount > 0 && (
-                <span className="ml-1 inline-flex min-w-5 items-center justify-center rounded-full bg-brand-600 px-1.5 text-xs font-semibold text-white">
+                <span className="ml-1 inline-flex min-w-5 items-center justify-center rounded-full bg-foreground px-1.5 text-xs font-semibold text-background">
                   {cartCount}
                 </span>
               )}
@@ -67,7 +118,7 @@ export function StoreLayout() {
               to="/pesanan"
               className={({ isActive }) =>
                 `tap-target inline-flex items-center rounded-lg px-3 ${
-                  isActive ? 'text-brand-700' : 'text-stone-600 hover:bg-stone-100'
+                  isActive ? 'text-foreground' : 'text-muted-foreground hover:bg-muted'
                 }`
               }
             >
@@ -80,7 +131,7 @@ export function StoreLayout() {
                   to="/akun"
                   className={({ isActive }) =>
                     `tap-target inline-flex items-center rounded-lg px-3 ${
-                      isActive ? 'text-brand-700' : 'text-stone-600 hover:bg-stone-100'
+                      isActive ? 'text-foreground' : 'text-muted-foreground hover:bg-muted'
                     }`
                   }
                 >
@@ -89,7 +140,7 @@ export function StoreLayout() {
                 {user.role === 'admin' && (
                   <NavLink
                     to="/admin"
-                    className="tap-target inline-flex items-center rounded-lg px-3 text-stone-600 hover:bg-stone-100"
+                    className="tap-target inline-flex items-center rounded-lg px-3 text-muted-foreground hover:bg-muted"
                   >
                     Admin
                   </NavLink>
@@ -101,7 +152,7 @@ export function StoreLayout() {
             ) : (
               <Link
                 to="/masuk"
-                className="tap-target inline-flex items-center rounded-lg bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
+                className="tap-target inline-flex items-center rounded-lg bg-primary px-3 text-sm font-medium text-background hover:bg-primary/90"
               >
                 Masuk
               </Link>
@@ -110,15 +161,17 @@ export function StoreLayout() {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">
+      <main className="bottom-nav-space mx-auto w-full max-w-5xl flex-1 px-4 pt-4 sm:py-6">
         <Outlet />
       </main>
 
-      <footer className="border-t border-stone-200 bg-white">
-        <div className="mx-auto max-w-5xl px-4 py-4 text-xs text-stone-500">
-          © {new Date().getFullYear()} Saybu — buah & sayur segar.
+      <footer className="hidden border-t border-border bg-card sm:block">
+        <div className="mx-auto max-w-5xl px-4 py-4 text-xs text-muted-foreground">
+          © {new Date().getFullYear()} Saybu — buah &amp; sayur segar.
         </div>
       </footer>
+
+      <BottomNav />
     </div>
   )
 }

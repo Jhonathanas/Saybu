@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Versi | 1.0 |
-| Terakhir diperbarui | 2026-11-15 |
+| Terakhir diperbarui | 2026-11-22 |
 | Cara pakai | Centang `[x]` saat selesai. Satu task = satu PR/commit yang bisa diuji. |
 
 **Legenda status:** `[ ]` belum · `[~]` sedang dikerjakan · `[x]` selesai · `[!]` terblokir
@@ -19,8 +19,8 @@
 | M2 | Katalog | 15 | 15 | ✅ |
 | M3 | Ongkir & order | 16 | 16 | ✅ |
 | M4 | Pembayaran & notifikasi | 14 | 14 | ✅ |
-| M5 | Kelengkapan | 12 | 0 | ⬜ |
-| M6 | Observability & hardening | 8 | 0 | ⬜ |
+| M5 | Kelengkapan | 12 | 12 | ✅ |
+| M6 | Observability & hardening | 8 | 8 | ✅ |
 | M7 | Deploy | 10 | 0 | ⬜ |
 
 ---
@@ -357,6 +357,30 @@
 
 ---
 
+## UI — Penyesuaian reference design (beranda & katalog)
+
+| ID | Status | Task | DoD | Estimasi |
+|---|---|---|---|---|
+| UI-01 | `[x]` | Bottom nav 5 tab + header ringkas di mobile, ikon SVG inline | Navigasi aktif benar, target sentuh ≥ 44 px | 1 j |
+| UI-02 | `[x]` | Hero bergambar + grid "Belanja cepat" di beranda | Tampil di mobile & desktop, fallback gambar aman | 1 j |
+| UI-03 | `[x]` | Kartu produk baru: badge kategori, `PriceTag` aksen oranye, tombol + | Harga tetap dari server, test RTL hijau | 1 j |
+| UI-04 | `[x]` | Filter katalog sticky + grid produk 2/3 kolom | Cari & filter kategori bekerja, test RTL hijau | 0.5 j |
+| UI-05 | `[x]` | Aset WebP teroptimasi (<100 KB/foto) dari Unsplash + catatan sumber | Semua file WebP valid, `SOURCES.md` ada | 0.5 j |
+| UI-06 | `[x]` | Screenshot hasil ke `ui-app/` (mobile & desktop) via Playwright | 6 PNG terbentuk dari data contoh | 0.5 j |
+| UI-07 | `[x]` | Rework seluruh frontend ke shadcn/ui v4 + Tailwind, tema netral | Adapter jalur lama tetap kompatibel, 96 test hijau, tanpa palet brand/accent | 2 j |
+
+Verifikasi (2026-11-22): `npm test` (21 file / 96 test), `npm run lint` (0 issue), `npm run typecheck`, `npm run build` hijau.
+Screenshot memakai fixture API (`page.route`) agar tidak bergantung backend. Kontrak API tidak berubah.
+
+Catatan UI-07: komponen kanonik shadcn berada di `src/components/ui/shadcn/` (repo case-insensitive,
+jadi `Button.tsx` dan `button.tsx` tidak bisa satu folder). File `Button.tsx`, `Card.tsx`,
+`Input.tsx`, `Select.tsx`, `Feedback.tsx`, `CopyButton.tsx`, `BottomNav.tsx` menjadi adapter
+yang memetakan API lama ke primitive shadcn. `Select` sengaja native agar `selectOptions`
+pada test RTL tetap bekerja. Semua warna memakai token `--background/foreground/primary/…`;
+status memakai `muted`, `secondary`, dan `destructive`.
+
+---
+
 ## Definition of Done (setiap task)
 
 - [ ] Kode + test (unit/integrasi sesuai kebutuhan) lulus
@@ -414,3 +438,4 @@
 | 2026-11-17 | Bug diperbaiki saat verifikasi: `payment.repo.AttachProof` menyisipkan baris bukti sebelum memvalidasi status, sehingga unggahan ulang saat `WAITING_VERIFICATION` (atau id bukti duplikat) gagal dengan error primary key alih-alih `ErrProofNotAllowed`. Kini validasi status (UPDATE terkunci) dijalankan lebih dulu; test integrasi repo pembayaran hijau |
 | 2026-11-18 | **M6 selesai (M6-01..M6-08).** Observability & hardening: propagasi `correlation_id` HTTP→gRPC→event→log; metrik `grpc_server_handling_seconds`/`kafka_consumer_lag`/`outbox_lag_seconds`/`orders_created_total` (lag via `kadm`); compose profil `observability` (Prometheus + Grafana, dashboard 8 panel); rate limit baca 120/mnt per IP + tulis admin 60/mnt per user dengan eviction bucket; header keamanan + `docs/SECURITY.md`; load test k6 (`make load-test`); backup/restore (`make backup`/`restore`) diuji utuh; `docs/RUNBOOK.md`. `make fmt && make lint && make test` hijau |
 | 2026-11-18 | Penyimpangan M6: rate limiter in-memory per instance (Redis ditunda ke M7 bila gateway di-scale); CSP belum dipasang (via Caddy M7); backup masih manual (otomatisasi + object storage di M7). Hasil load test: katalog p95 ≈ 242 ms, checkout p95 ≈ 449 ms (ambang 300/500 ms) |
+| 2026-11-18 | UI-01..UI-06 selesai. Beranda & katalog diselaraskan dengan reference design (`refernce-design/`): bottom nav mobile + header ringkas, hero bergambar, grid kategori, kartu produk dengan aksen oranye, filter katalog sticky. Aset WebP lokal dari Unsplash (target <100 KB/file, sumber di `frontend/public/images/SOURCES.md`). Playwright dipasang untuk screenshot; hasil ada di `ui-app/` (6 PNG: beranda/produk × mobile viewport, mobile penuh, desktop). Screenshot memakai fixture API sehingga tidak perlu backend |

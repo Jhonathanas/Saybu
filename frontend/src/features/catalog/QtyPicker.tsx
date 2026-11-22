@@ -40,7 +40,7 @@ export function QtyPicker({
   const clamp = (next: number) => Math.max(0, Math.min(next, max))
 
   const buttonClass =
-    'tap-target inline-flex items-center justify-center rounded-lg border border-stone-300 bg-white text-lg text-stone-700 hover:bg-stone-100 disabled:opacity-40'
+    'tap-target inline-flex items-center justify-center rounded-lg border border-border bg-card text-lg text-foreground hover:bg-muted disabled:opacity-40'
 
   return (
     <div className="flex items-center gap-2">
@@ -56,7 +56,7 @@ export function QtyPicker({
       <input
         aria-label="Jumlah"
         inputMode="decimal"
-        className="tap-target w-20 rounded-lg border border-stone-300 bg-white px-2 text-center text-sm text-stone-900"
+        className="tap-target w-20 rounded-lg border border-border bg-card px-2 text-center text-sm text-foreground"
         value={draft ?? toDisplay(unit, value)}
         disabled={disabled}
         onChange={(e) => setDraft(e.target.value)}
@@ -67,7 +67,7 @@ export function QtyPicker({
           }
         }}
       />
-      <span className="w-8 text-sm text-stone-500">{unit}</span>
+      <span className="w-8 text-sm text-muted-foreground">{unit}</span>
       <button
         type="button"
         className={buttonClass}

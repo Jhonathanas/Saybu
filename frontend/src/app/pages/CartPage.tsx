@@ -20,7 +20,7 @@ export function CartPage() {
   if (lines.length === 0) {
     return (
       <div className="flex flex-col gap-4">
-        <h1 className="text-xl font-bold text-stone-900">Keranjang</h1>
+        <h1 className="text-xl font-bold text-foreground">Keranjang</h1>
         <Alert tone="info">
           Keranjang masih kosong.{' '}
           <Link to="/produk" className="font-medium underline">
@@ -35,7 +35,7 @@ export function CartPage() {
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-stone-900">Keranjang</h1>
+        <h1 className="text-xl font-bold text-foreground">Keranjang</h1>
         <Button variant="ghost" size="sm" onClick={clear}>
           Kosongkan
         </Button>
@@ -45,7 +45,7 @@ export function CartPage() {
         {lines.map((line) => (
           <li
             key={line.productId}
-            className="flex flex-col gap-3 rounded-2xl border border-stone-200 bg-white p-3 sm:flex-row sm:items-center"
+            className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-3 sm:flex-row sm:items-center"
           >
             <ProductImage
               src={line.image}
@@ -56,11 +56,11 @@ export function CartPage() {
             <div className="flex-1">
               <Link
                 to={`/produk/${line.slug}`}
-                className="font-medium text-stone-900 hover:text-brand-700"
+                className="font-medium text-foreground hover:text-foreground"
               >
                 {line.name}
               </Link>
-              <p className="text-sm text-stone-500">
+              <p className="text-sm text-muted-foreground">
                 {formatIDR(line.price)} / {line.unit}
               </p>
             </div>
@@ -75,11 +75,11 @@ export function CartPage() {
             />
 
             <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-end">
-              <p className="font-semibold text-stone-900">{formatIDR(lineTotal(line))}</p>
+              <p className="font-semibold text-foreground">{formatIDR(lineTotal(line))}</p>
               <button
                 type="button"
                 onClick={() => remove(line.productId)}
-                className="text-sm text-red-600 hover:underline"
+                className="text-sm text-destructive hover:underline"
               >
                 Hapus
               </button>
@@ -88,12 +88,12 @@ export function CartPage() {
         ))}
       </ul>
 
-      <div className="flex flex-col gap-3 rounded-2xl border border-stone-200 bg-white p-4">
-        <div className="flex items-center justify-between text-lg font-bold text-stone-900">
+      <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4">
+        <div className="flex items-center justify-between text-lg font-bold text-foreground">
           <span>Subtotal</span>
           <span>{formatIDR(subtotal)}</span>
         </div>
-        <p className="text-xs text-stone-500">
+        <p className="text-xs text-muted-foreground">
           Ongkir dan metode pengambilan dihitung di halaman checkout.
         </p>
         <Button onClick={() => navigate('/checkout')}>Checkout</Button>

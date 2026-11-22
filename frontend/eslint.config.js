@@ -26,4 +26,12 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    // Komponen shadcn/ui sengaja mengekspor helper (buttonVariants, dll.)
+    // bersama komponen; aturan refresh hanya relevan untuk file fitur.
+    files: ['src/components/ui/**/*.{ts,tsx}'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
 )

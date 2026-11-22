@@ -73,11 +73,12 @@ export function paymentStatusLabel(status: string): string {
   return PAYMENT_STATUS[status]?.label ?? status
 }
 
+/** Nada status memakai token shadcn/ui agar konsisten di mode terang & gelap. */
 const TONE_CLASS: Record<PaymentTone, string> = {
-  pending: 'bg-amber-50 text-amber-800 ring-amber-200',
-  done: 'bg-brand-50 text-brand-800 ring-brand-200',
-  error: 'bg-red-50 text-red-700 ring-red-200',
-  cancelled: 'bg-stone-100 text-stone-600 ring-stone-200',
+  pending: 'bg-muted text-foreground ring-border',
+  done: 'bg-foreground text-background ring-foreground',
+  error: 'bg-destructive/10 text-destructive ring-destructive/20',
+  cancelled: 'bg-background text-muted-foreground ring-border',
 }
 
 export function paymentStatusBadgeClass(status: string): string {

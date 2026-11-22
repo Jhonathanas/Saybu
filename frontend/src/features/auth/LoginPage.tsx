@@ -50,8 +50,8 @@ export function LoginPage() {
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 px-4 py-10">
       <header className="text-center">
-        <h1 className="text-2xl font-bold text-brand-700">Masuk ke Saybu</h1>
-        <p className="mt-1 text-sm text-stone-500">
+        <h1 className="text-2xl font-bold text-foreground">Masuk ke Saybu</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           Gunakan nomor HP atau email yang terdaftar.
         </p>
       </header>
@@ -79,14 +79,14 @@ export function LoginPage() {
         </Button>
       </form>
 
-      <p className="text-center text-sm text-stone-600">
+      <p className="text-center text-sm text-muted-foreground">
         Belum punya akun?{' '}
-        <Link to="/daftar" className="font-medium text-brand-700 hover:underline">
+        <Link to="/daftar" className="font-medium text-foreground hover:underline">
           Daftar di sini
         </Link>
       </p>
       <p className="text-center text-sm">
-        <Link to="/" className="text-stone-500 hover:underline">
+        <Link to="/" className="text-muted-foreground hover:underline">
           Lanjut belanja tanpa akun
         </Link>
       </p>

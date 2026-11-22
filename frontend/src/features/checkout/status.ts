@@ -28,11 +28,12 @@ export function statusTone(status: string): StatusTone {
   return STATUS[status]?.tone ?? 'pending'
 }
 
+/** Nada status memakai token shadcn/ui agar konsisten di mode terang & gelap. */
 const TONE_CLASS: Record<StatusTone, string> = {
-  pending: 'bg-amber-50 text-amber-800 ring-amber-200',
-  progress: 'bg-sky-50 text-sky-800 ring-sky-200',
-  done: 'bg-brand-50 text-brand-800 ring-brand-200',
-  cancelled: 'bg-stone-100 text-stone-600 ring-stone-200',
+  pending: 'bg-muted text-foreground ring-border',
+  progress: 'bg-secondary text-secondary-foreground ring-border',
+  done: 'bg-foreground text-background ring-foreground',
+  cancelled: 'bg-background text-muted-foreground ring-border',
 }
 
 export function statusBadgeClass(status: string): string {

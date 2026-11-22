@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Check, Copy } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from './Button'
 
@@ -18,8 +19,9 @@ export function CopyButton({ value, label = 'Salin' }: { value: string; label?: 
   }
 
   return (
-    <Button type="button" variant="secondary" size="sm" onClick={copy}>
-      {copied ? 'Tersalin ✓' : label}
+    <Button type="button" variant="secondary" size="sm" onClick={copy} aria-label={label}>
+      {copied ? <Check aria-hidden="true" className="size-4" /> : <Copy aria-hidden="true" className="size-4" />}
+      {copied ? 'Tersalin' : label}
     </Button>
   )
 }

@@ -29,8 +29,8 @@ export function AdminOrderDetailPage() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-xl font-bold text-stone-900">Detail pesanan</h1>
-        <Link to="/admin/pesanan" className="text-sm text-stone-600 hover:underline">
+        <h1 className="text-xl font-bold text-foreground">Detail pesanan</h1>
+        <Link to="/admin/pesanan" className="text-sm text-muted-foreground hover:underline">
           ← Daftar pesanan
         </Link>
       </div>
@@ -93,7 +93,7 @@ function StatusForm({ orderId, status, onUpdated }: StatusFormProps) {
   if (transitions.length === 0) {
     return (
       <Card title="Ubah status">
-        <p className="text-sm text-stone-500">
+        <p className="text-sm text-muted-foreground">
           Status <strong>{statusLabel(status)}</strong> bersifat final dan tidak bisa diubah.
         </p>
       </Card>
@@ -117,7 +117,7 @@ function StatusForm({ orderId, status, onUpdated }: StatusFormProps) {
         />
 
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="catatan-status" className="text-sm font-medium text-stone-700">
+          <label htmlFor="catatan-status" className="text-sm font-medium text-foreground">
             Catatan (opsional)
           </label>
           <textarea
@@ -126,7 +126,7 @@ function StatusForm({ orderId, status, onUpdated }: StatusFormProps) {
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="Mis. sedang disiapkan pagi ini"
-            className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900"
+            className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground"
           />
         </div>
 

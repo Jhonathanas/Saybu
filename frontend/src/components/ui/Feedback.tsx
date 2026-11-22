@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react'
+import { CircleAlert, CircleCheck, Info, LoaderCircle } from 'lucide-react'
+import { Alert as AlertPrimitive, AlertTitle, AlertDescription } from './shadcn/alert'
+import { cn } from '@/lib/utils'
 
 export function Spinner({ label = 'Memuat…' }: { label?: string }) {
   return (
-    <div role="status" className="flex items-center justify-center gap-3 py-10 text-stone-500">
-      <span
-        aria-hidden="true"
-        className="size-5 animate-spin rounded-full border-2 border-stone-300 border-t-brand-600"
-      />
+    <div role="status" className="flex items-center justify-center gap-3 py-10 text-muted-foreground">
+      <LoaderCircle aria-hidden="true" className="size-5 animate-spin" />
       <span className="text-sm">{label}</span>
     </div>
   )
@@ -22,22 +22,30 @@ export function PageLoader() {
 
 type AlertTone = 'error' | 'info' | 'success'
 
-const tones: Record<AlertTone, string> = {
-  error: 'border-red-200 bg-red-50 text-red-800',
-  info: 'border-sky-200 bg-sky-50 text-sky-800',
-  success: 'border-brand-200 bg-brand-50 text-brand-800',
+const icons = {
+  error: CircleAlert,
+  info: Info,
+  success: CircleCheck,
 }
 
-export function Alert({
-  tone = 'info',
-  children,
-}: {
-  tone?: AlertTone
-  children: ReactNode
-}) {
+const toneClass: Record<AlertTone, string> = {
+  error: '',
+  info: 'border-border bg-card text-card-foreground',
+  success: 'border-foreground/20 bg-card text-card-foreground',
+}
+
+/** API lama (`tone`) dipetakan ke komponen Alert shadcn/ui. */
+export function Alert({ tone = 'info', children }: { tone?: AlertTone; children: ReactNode }) {
+  const Icon = icons[tone]
   return (
-    <div role="alert" className={`rounded-lg border px-3 py-2 text-sm ${tones[tone]}`}>
-      {children}
-    </div>
+    <AlertPrimitive
+      variant={tone === 'error' ? 'destructive' : 'default'}
+      className={cn('gap-2', toneClass[tone])}
+    >
+      <Icon aria-hidden="true" className="size-4" />
+      <AlertDescription className="text-current">{children}</AlertDescription>
+    </AlertPrimitive>
   )
 }
+
+export { AlertPrimitive, AlertTitle, AlertDescription }

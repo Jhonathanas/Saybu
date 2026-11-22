@@ -64,7 +64,7 @@ export function ProofUploadForm({ code, phone, onUploaded }: ProofUploadFormProp
       }}
     >
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="proof-file" className="text-sm font-medium text-stone-700">
+        <label htmlFor="proof-file" className="text-sm font-medium text-foreground">
           Unggah bukti transfer
         </label>
         <input
@@ -76,7 +76,7 @@ export function ProofUploadForm({ code, phone, onUploaded }: ProofUploadFormProp
           disabled={upload.isPending}
           onChange={(e) => handleSelect(e.target.files?.[0] ?? null)}
         />
-        <p className="text-xs text-stone-500">
+        <p className="text-xs text-muted-foreground">
           Format JPG, PNG, atau PDF. Maksimal 5 MB. Sertakan kode pesanan bila memungkinkan.
         </p>
       </div>

@@ -20,7 +20,7 @@ export function ProductImage({ src, alt, className = '' }: ProductImageProps) {
     <div
       role="img"
       aria-label={`${alt} (belum ada foto)`}
-      className={`flex items-center justify-center bg-brand-50 text-2xl text-brand-300 ${className}`}
+      className={`flex items-center justify-center bg-muted text-2xl text-muted-foreground ${className}`}
     >
       🥬
     </div>
