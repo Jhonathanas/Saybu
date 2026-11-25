@@ -19,6 +19,10 @@ event lewat Kafka, database Postgres terpisah per service.
 | `docs/API_SPEC.md` | Kontrak REST, gRPC, dan event Kafka |
 | `docs/TASK.md` | Backlog per milestone + Definition of Done |
 
+**Skill desain:** `.opencode/skills/design-md/` berisi referensi `DESIGN.md` (Vercel sebagai
+default, Linear, Cal.com) untuk membuat UI yang konsisten. Pakai skill ini saat mengubah
+tampilan, tetapi tetap terjemahkan ke token shadcn yang ada — lihat `SKILL.md` di folder tersebut.
+
 **Sumber kebenaran:** bila kode dan dokumen berbeda, dokumen menang sampai diperbarui secara sadar.
 
 ---
