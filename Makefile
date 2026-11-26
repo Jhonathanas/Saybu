@@ -6,7 +6,7 @@ COMPOSE ?= docker compose
 BUF     ?= buf
 SERVICES := gateway auth catalog shipping order payment notification
 
-.PHONY: help up down logs ps restart proto migrate migrate-down seed dev dev-frontend test test-frontend test-e2e test-integration lint lint-frontend fmt build clean observability observability-down load-test backup restore
+.PHONY: help up down logs ps restart proto migrate migrate-down seed dev dev-frontend test test-frontend test-e2e test-integration lint lint-frontend fmt build clean observability observability-down load-test backup restore prod-up prod-migrate prod-logs prod-config
 
 help: ## Tampilkan daftar target
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -48,6 +48,18 @@ backup: ## Backup semua database ke backups/<timestamp>
 restore: ## Restore database dari backup (pakai DIR=backups/<timestamp>)
 	@test -n "$(DIR)" || { echo "pakai: make restore DIR=backups/<timestamp>"; exit 1; }
 	bash infra/scripts/restore.sh "$(DIR)"
+
+prod-config: ## Validasi docker-compose.prod.yml (butuh env produksi)
+	docker compose -f docker-compose.prod.yml config -q
+
+prod-migrate: ## Migrasi produksi via image sekali jalan (goose up)
+	docker compose -f docker-compose.prod.yml --profile migrate run --rm migrate
+
+prod-up: ## Deploy lokal image produksi yang sudah di-pull
+	docker compose -f docker-compose.prod.yml up -d --remove-orphans
+
+prod-logs: ## Ikuti log semua service produksi
+	docker compose -f docker-compose.prod.yml logs -f --tail=100
 
 proto: ## Generate kode dari protobuf
 	cd backend/proto && $(BUF) lint && $(BUF) generate

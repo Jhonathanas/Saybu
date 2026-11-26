@@ -1,0 +1,36 @@
+# Caddy produksi: TLS otomatis, SPA fallback, dan static uploads.
+# SITE_DOMAIN & ADMIN_EMAIL diambil dari environment (lihat .env.example).
+# - /api/*    -> gateway:8081
+# - /uploads/* -> volume uploads (ditulis gateway, dibaca Caddy)
+# - lainnya  -> frontend/dist dengan fallback ke index.html
+{
+	email {$ADMIN_EMAIL}
+}
+
+{$SITE_DOMAIN} {
+	encode zstd gzip
+
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		Permissions-Policy "geolocation=(), microphone=(), camera=()"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+	}
+
+	handle /api/* {
+		reverse_proxy gateway:8081
+	}
+
+	handle /uploads/* {
+		root * /srv/uploads
+		file_server
+	}
+
+	handle {
+		root * /srv/frontend
+		try_files {path} /index.html
+		file_server
+	}
+}

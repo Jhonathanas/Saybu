@@ -1,0 +1,19 @@
+# Image sekali jalan untuk menjalankan goose up/d pada semua DB.
+# Build context: ROOT repo (bukan backend/) agar skrip infra/ ikut tersalin.
+FROM golang:1.26.11-alpine AS goose
+RUN go install github.com/pressly/goose/v3/cmd/goose@v3.30.0
+
+FROM alpine:3.22
+RUN apk add --no-cache bash ca-certificates postgresql-client tzdata
+COPY --from=goose /go/bin/goose /usr/local/bin/goose
+COPY backend/services/auth/migrations /srv/backend/services/auth/migrations
+COPY backend/services/catalog/migrations /srv/backend/services/catalog/migrations
+COPY backend/services/shipping/migrations /srv/backend/services/shipping/migrations
+COPY backend/services/order/migrations /srv/backend/services/order/migrations
+COPY backend/services/payment/migrations /srv/backend/services/payment/migrations
+COPY backend/services/notification/migrations /srv/backend/services/notification/migrations
+COPY infra/scripts/migrate-prod.sh /usr/local/bin/migrate.sh
+RUN chmod 0755 /usr/local/bin/migrate.sh
+ENV TZ=Asia/Jakarta \
+    MIGRATIONS_ROOT=/srv/backend/services
+ENTRYPOINT ["/usr/local/bin/migrate.sh"]
