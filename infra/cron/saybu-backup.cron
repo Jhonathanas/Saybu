@@ -1,0 +1,4 @@
+# Backup Saybu tiap pukul 02:00 waktu VPS.
+# Pastikan timezone VPS = Asia/Jakarta agar sesuai jadwal toko.
+# Pasang dengan: crontab infra/cron/saybu-backup.cron
+0 2 * * * /opt/saybu/infra/scripts/cron-backup.sh

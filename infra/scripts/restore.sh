@@ -6,6 +6,7 @@
 #
 # Pemakaian:
 #   bash infra/scripts/restore.sh <direktori-backup>
+# Menerima dump .sql maupun .sql.gz (hasil backup.sh dengan kompresi).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -21,7 +22,7 @@ CONTAINER="${POSTGRES_CONTAINER:-saybu-postgres}"
 DB_USER="${POSTGRES_USER:-saybu}"
 
 DBS=()
-for var in AUTH_DB_DSN CATALOG_DB_DSN SHIPPING_DB_DSN ORDER_DB_DSN PAYMENT_DB_DSN; do
+for var in AUTH_DB_DSN CATALOG_DB_DSN SHIPPING_DB_DSN ORDER_DB_DSN PAYMENT_DB_DSN NOTIFICATION_DB_DSN; do
   dsn="${!var:-}"
   [[ -n "$dsn" ]] || continue
   db="${dsn%%\?*}"
@@ -29,7 +30,7 @@ for var in AUTH_DB_DSN CATALOG_DB_DSN SHIPPING_DB_DSN ORDER_DB_DSN PAYMENT_DB_DS
   [[ -n "$db" ]] && DBS+=("$db")
 done
 if [[ ${#DBS[@]} -eq 0 ]]; then
-  DBS=(saybu_auth saybu_catalog saybu_shipping saybu_orders saybu_payments)
+  DBS=(saybu_auth saybu_catalog saybu_shipping saybu_orders saybu_payments saybu_notifications)
 fi
 
 dir="${1:-}"
@@ -44,15 +45,29 @@ if ! docker inspect "$CONTAINER" >/dev/null 2>&1; then
 fi
 
 for db in "${DBS[@]}"; do
-  file="$dir/$db.sql"
-  if [[ ! -f "$file" ]]; then
-    echo "!! lewati $db: $file tidak ada" >&2
+  file=""
+  compressed=false
+  if [[ -f "$dir/$db.sql.gz" ]]; then
+    file="$dir/$db.sql.gz"
+    compressed=true
+  elif [[ -f "$dir/$db.sql" ]]; then
+    file="$dir/$db.sql"
+  fi
+
+  if [[ -z "$file" ]]; then
+    echo "!! lewati $db: dump tidak ada di $dir" >&2
     continue
   fi
-  echo "== restore $db =="
+
+  echo "== restore $db dari $(basename "$file") =="
   docker exec -i "$CONTAINER" psql -q -v ON_ERROR_STOP=1 -U "$DB_USER" -d "$db" \
     -c "DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public;"
-  docker exec -i "$CONTAINER" psql -q -v ON_ERROR_STOP=1 -U "$DB_USER" -d "$db" < "$file" > /dev/null
+
+  if [[ "$compressed" == "true" ]]; then
+    gzip -cd "$file" | docker exec -i "$CONTAINER" psql -q -v ON_ERROR_STOP=1 -U "$DB_USER" -d "$db" > /dev/null
+  else
+    docker exec -i "$CONTAINER" psql -q -v ON_ERROR_STOP=1 -U "$DB_USER" -d "$db" < "$file" > /dev/null
+  fi
 done
 
 echo
