@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Versi | 1.0 |
-| Terakhir diperbarui | 2026-11-22 |
+| Terakhir diperbarui | 2026-11-26 |
 | Cara pakai | Centang `[x]` saat selesai. Satu task = satu PR/commit yang bisa diuji. |
 
 **Legenda status:** `[ ]` belum · `[~]` sedang dikerjakan · `[x]` selesai · `[!]` terblokir
@@ -353,6 +353,33 @@
 
 ---
 
+## Utang teknis pra-deploy
+
+Semua item di bawah sudah tuntas. M7 baru dimulai setelah verifikasi penuh (catatan 2026-11-26).
+
+| ID | Status | Item | Bukti |
+|---|---|---|---|
+| TD-01 | `[x]` | Audit log persisten (bukan hanya log gateway) | Tabel `saybu_auth.audit_logs` + RPC `RecordAudit`; migrasi up/down & test integrasi lulus |
+| TD-02 | `[x]` | Dedup konsumer notification persisten | DB `saybu_notifications`, pola `pending → sent / release`; test integrasi lulus |
+| TD-03 | `[x]` | Alerting Grafana → Telegram | 4 rule + contact point ter-provision; Verifikasi via API Grafana |
+| TD-04 | `[x]` | E2E checkout otomatis (Playwright) | 8 test (4 skenario × mobile/desktop) hijau; fixture API, tanpa backend |
+| TD-05 | `[x]` | Gate keamanan dependency di CI | `govulncheck` & `npm audit --audit-level=high` 0 temuan; Dependabot mingguan |
+| TD-06 | `[x]` | Upgrade Go stdlib | `go 1.26.11`, 39 kerentanan stdlib hilang |
+| TD-07 | `[x]` | Konsistensi dokumentasi Kafka | RUNBOOK: 3 partisi per topik, selaras dengan `create-topics.sh` & compose |
+
+**Catatan:**
+- `TD-01`/`TD-02` menambah migrasi baru; keduanya sudah diuji `goose up` **dan** `goose down`.
+- `TD-03` memakai placeholder `disabled` saat kredensial Telegram kosong agar provisioning tetap valid.
+  Alert aktif, tetapi pengiriman gagal/log sampai `.env` diisi.
+- `TD-04` memakai `page.route` (`frontend/e2e/mock-api.ts`) agar E2E deterministik di CI;
+  alur dengan backend asli tetap tercakup oleh 72 E2E manual via gateway (catatan 2026-11-17).
+  Vitest dikonfigurasi hanya memuat `src/**/*.{test,spec}.{ts,tsx}` agar spesifikasi Playwright
+  tidak ikut ter-load sebagai unit test.
+- `M5-12` (uji usability dengan orangtua) masih satu-satunya task M5 yang terbuka dan **tidak**
+  bisa diotomatisasi; gate M5 penuh menunggu partisipan nyata.
+
+---
+
 ## M7 — Deploy
 
 | ID | Task | Acceptance | Est |
@@ -457,3 +484,6 @@ yang belum ada, tidak menimpa unggahan admin.
 | 2026-11-18 | **M6 selesai (M6-01..M6-08).** Observability & hardening: propagasi `correlation_id` HTTP→gRPC→event→log; metrik `grpc_server_handling_seconds`/`kafka_consumer_lag`/`outbox_lag_seconds`/`orders_created_total` (lag via `kadm`); compose profil `observability` (Prometheus + Grafana, dashboard 8 panel); rate limit baca 120/mnt per IP + tulis admin 60/mnt per user dengan eviction bucket; header keamanan + `docs/SECURITY.md`; load test k6 (`make load-test`); backup/restore (`make backup`/`restore`) diuji utuh; `docs/RUNBOOK.md`. `make fmt && make lint && make test` hijau |
 | 2026-11-18 | Penyimpangan M6: rate limiter in-memory per instance (Redis ditunda ke M7 bila gateway di-scale); CSP belum dipasang (via Caddy M7); backup masih manual (otomatisasi + object storage di M7). Hasil load test: katalog p95 ≈ 242 ms, checkout p95 ≈ 449 ms (ambang 300/500 ms) |
 | 2026-11-18 | UI-01..UI-06 selesai. Beranda & katalog diselaraskan dengan reference design (`refernce-design/`): bottom nav mobile + header ringkas, hero bergambar, grid kategori, kartu produk dengan aksen oranye, filter katalog sticky. Aset WebP lokal dari Unsplash (target <100 KB/file, sumber di `frontend/public/images/SOURCES.md`). Playwright dipasang untuk screenshot; hasil ada di `ui-app/` (6 PNG: beranda/produk × mobile viewport, mobile penuh, desktop). Screenshot memakai fixture API sehingga tidak perlu backend |
+| 2026-11-22 | UI-07 selesai: rework frontend ke shadcn/ui v4 + Tailwind, tema netral sesuai `DESIGN.md` (Vercel). Adapter lama tetap kompatibel; 98 test hijau. Tipografi headline & stacked shadow kartu produk disesuaikan (commit `816e4a7`) |
+| 2026-11-26 | **Utang teknis pra-deploy tuntas (TD-01..TD-07).** Audit log persisten via RPC `auth.v1.RecordAudit` + migrasi `audit_logs`; dedup notifikasi persisten di `saybu_notifications.processed_events` dengan pola `pending → sent / release`; alerting Grafana 4 rule → Telegram; E2E Playwright 8 test (checkout sukses, validasi, PICKUP/COD, lacak pesanan × mobile/desktop) dengan fixture API; CI `security` + `integration` + `e2e` + Dependabot; Go `1.26.11`; `npm audit`/`govulncheck` 0 temuan; RUNBOOK diselaraskan dengan 3 partisi Kafka. `make fmt && make lint && make test && make test-integration` hijau |
+| 2026-11-26 | **Gate sebelum M7:** seluruh utang teknis selesai; M6 = 9/9, M5 = 11/12 (M5-12 butuh partisipan nyata), M7 = 0/10 belum dimulai. Aplikasi masih bisa diuji manual di `http://localhost:5173` |

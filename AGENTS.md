@@ -37,6 +37,7 @@ tampilan, tetapi tetap terjemahkan ke token shadcn yang ada — lihat `SKILL.md`
 - [x] **M4 Payment & Notifikasi** — payment service (bukti transfer, verifikasi admin, status), konsumer order & catalog, notifikasi Telegram, frontend panel pembayaran + admin verifikasi
 - [~] **M5 Kelengkapan** — riwayat pesanan akun, admin pesanan (daftar/detail/ubah status) & ringkasan harian, pembatalan pembeli, COD lunas saat selesai, notifikasi stok menipis, halaman 404/500 + error boundary, SEO dasar, audit mutasi admin. `M5-12` uji usability dengan orangtua masih pending.
 - [x] **M6 Observability & hardening** — metrik Prometheus semua service, dashboard Grafana + alerting Telegram, propagasi `request_id` HTTP→gRPC→event→log, rate limit seluruh endpoint, security review (`docs/SECURITY.md`), load test k6, uji restore backup, runbook (`docs/RUNBOOK.md`)
+- [x] **Utang teknis pra-deploy** (TD-01..TD-07) — audit persisten, dedup notifikasi persisten, alerting, E2E Playwright, dependency scan, Go 1.26.11, konsistensi docs Kafka
 - [ ] M7 Deploy
 
 > Saat mulai bekerja, perbarui bagian ini dan centang task terkait di `docs/TASK.md`.

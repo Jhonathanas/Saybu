@@ -144,8 +144,9 @@ docker exec saybu-kafka /opt/kafka/bin/kafka-consumer-groups.sh \
   1. Pastikan consumer service hidup (§3).
   2. Cek error berulang di log (mis. DB lambat, bug handler).
   3. Bila handler selalu gagal, pesan akan masuk `.dlq` setelah 3 percobaan (§8).
-  4. Scale: jalankan instance consumer tambahan (partisi topik = 1 saat ini, jadi
-     paralelisme terbatas; tingkatkan partisi bila perlu).
+  4. Scale: jalankan instance consumer tambahan. Setiap topik memakai 3 partisi
+     (`infra/kafka/create-topics.sh`, `KAFKA_NUM_PARTITIONS=3` di compose), jadi hingga
+     3 instance per consumer group bisa bekerja paralel; jangan melebihi jumlah partisi.
 
 **Verifikasi:** lag kembali mendekati 0 dan stabil di dashboard.
 

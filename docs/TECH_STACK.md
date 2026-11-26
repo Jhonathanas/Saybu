@@ -114,7 +114,7 @@ services/<name>/
 | Ikon | lucide-react |
 | Notifikasi toast | sonner |
 | Format uang/tanggal | Intl.NumberFormat / Intl.DateTimeFormat (`id-ID`, Asia/Jakarta) |
-| Testing | Vitest + React Testing Library |
+| Testing | Vitest + React Testing Library (unit), Playwright (E2E checkout) |
 | Lint | ESLint 9 + Prettier |
 
 ### Struktur frontend
@@ -252,8 +252,10 @@ VITE_BANK_HOLDER="Saybu Buah & Sayur"
 | `make seed` | Data contoh (kategori, produk, zona, admin) |
 | `make dev` | Jalankan semua service Go (paralel) |
 | `make dev-frontend` | `npm run dev` di `frontend/` |
-| `make test` | Unit test |
-| `make test-integration` | Test integrasi Kafka (butuh infra hidup) |
+| `make test` | Unit test Go |
+| `make test-frontend` | Unit test frontend (Vitest) |
+| `make test-e2e` | E2E checkout (Playwright, API fixture; Vite otomatis) |
+| `make test-integration` | Test integrasi Postgres + Kafka (butuh infra hidup) |
 | `make lint` | `go vet` + golangci-lint (bila ada) |
 | `make fmt` | `gofmt -w` |
 | `make build` | Build semua binary ke `backend/bin` |

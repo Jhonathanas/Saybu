@@ -4,6 +4,10 @@ dist-ssr
 coverage
 *.local
 .vite
+test-results/
+playwright-report/
+blob-report/
+.playwright/
 
 # Editor
 .vscode/*

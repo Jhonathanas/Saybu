@@ -6,7 +6,7 @@ COMPOSE ?= docker compose
 BUF     ?= buf
 SERVICES := gateway auth catalog shipping order payment notification
 
-.PHONY: help up down logs ps restart proto migrate migrate-down seed dev dev-frontend test test-frontend test-integration lint lint-frontend fmt build clean observability observability-down load-test backup restore
+.PHONY: help up down logs ps restart proto migrate migrate-down seed dev dev-frontend test test-frontend test-e2e test-integration lint lint-frontend fmt build clean observability observability-down load-test backup restore
 
 help: ## Tampilkan daftar target
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -74,6 +74,9 @@ test: ## Unit test Go
 
 test-frontend: ## Test frontend (Vitest)
 	cd frontend && npm run test
+
+test-e2e: ## Test E2E frontend (Playwright, API fixture; install browser sekali)
+	cd frontend && npm run test:e2e
 
 test-integration: ## Test integrasi (butuh Postgres + Kafka berjalan)
 	cd backend && set -a && . ../.env && set +a && KAFKA_BROKERS=$${KAFKA_BROKERS:-localhost:29092} $(GO) test -tags=integration -count=1 ./...

@@ -31,5 +31,9 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     css: false,
+    // Unit test Vitest hanya dari src; spesifikasi Playwright di e2e/ tidak
+    // boleh ikut ter-load (test.describe()-nya bukan API Vitest).
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    exclude: ['e2e/**', 'node_modules/**', 'dist/**'],
   },
 })
