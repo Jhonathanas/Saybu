@@ -36,8 +36,9 @@ Toko online buah & sayur untuk usaha keluarga — sekaligus proyek latihan
 
 Artefak produksi sudah ada di repo: `docker-compose.prod.yml`, `infra/Caddyfile`,
 Dockerfile per service, image `saybu-migrate`, dan `.github/workflows/cd.yml`.
-Panduan penyiapan VPS, secret, migrasi, verifikasi, dan rollback ada di
-[docs/RUNBOOK.md](docs/RUNBOOK.md) §17.
+Panduan penyiapan VPS, secret, domain, dan Telegram ada di
+[docs/DEPLOY_CHECKLIST.md](docs/DEPLOY_CHECKLIST.md). Prosedur migrasi, verifikasi,
+dan rollback ada di [docs/RUNBOOK.md](docs/RUNBOOK.md) §17.
 
 ## Prasyarat
 

@@ -407,7 +407,9 @@ menutupi kapasitas backend. Reset stok sebelum uji checkout:
 
 **Prasyarat di VPS:** Docker + Compose v2, firewall 22/80/443, repo di
 `DEPLOY_PATH` (mis. `/opt/saybu`), `.env` produksi sudah diisi, dan cron backup
-dipasang (`crontab infra/cron/saybu-backup.cron`).
+dipasang (`crontab infra/cron/saybu-backup.cron`). Evaluasi awal:
+`bash infra/scripts/check-vps.sh`. Detail input yang masih dibutuhkan ada di
+`docs/DEPLOY_CHECKLIST.md`.
 
 **Secret GitHub Actions:** `SSH_HOST`, `SSH_USER`, `SSH_KEY`, `SSH_PORT` (opsional),
 `DEPLOY_PATH`. Push ke `main` menjalankan `.github/workflows/cd.yml`.

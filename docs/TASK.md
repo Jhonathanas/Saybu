@@ -388,16 +388,16 @@ Semua item di bawah sudah tuntas. M7 baru dimulai setelah verifikasi penuh (cata
 
 | ID | Task | Acceptance | Est |
 |---|---|---|---|
-| M7-01 | `[ ]` Provision VPS ≥ 4 GB + Docker + firewall (22/80/443) | `docker run hello-world` | 1 j |
+| M7-01 | `[~]` Provision VPS ≥ 4 GB + Docker + firewall (22/80/443) | `check-vps.sh` siap; evaluasi calon VPS berjalan | 1 j |
 | M7-02 | `[~]` `docker-compose.prod.yml` + Caddy (TLS, SPA fallback, uploads) | HTTPS aktif — file siap, menunggu domain & VPS | 1.5 j |
-| M7-03 | `[ ]` Domain + DNS + email admin | Domain resolve | 0.5 j |
+| M7-03 | `[~]` Domain + DNS + email admin | Checklist DNS siap; domain belum dipilih | 0.5 j |
 | M7-04 | `[x]` Dockerfile semua service (multi-stage, non-root, healthcheck) | 7 Dockerfile + build statik; image terbesar terukur 47,7 MB | 1.5 j |
 | M7-05 | `[~]` GitHub Actions CD ke GHCR + deploy SSH | Workflow siap; menunggu secret VPS & GHCR | 1 j |
 | M7-06 | `[x]` Job migrasi sebelum deploy service | `backend/Dockerfile.migrate` + `migrate-prod.sh` (up/down) | 0.5 j |
 | M7-07 | `[~]` Backup harian Postgres + upload object storage + retensi 7 hari | Skrip & cron siap; menunggu rclone remote di VPS | 1 j |
 | M7-08 | `[~]` Monitoring uptime + alert Telegram bila service down | Rule `up == 0` sudah ada; scrape produksi siap, perlu verifikasi setelah deploy | 0.5 j |
-| M7-09 | `[ ]` Seed data produk asli + foto + zona ongkir | Katalog siap jual | 1 j |
-| M7-10 | `[ ]` Go-live checklist: uji pesanan nyata, verifikasi transfer, notifikasi | Semua lulus | 1 j |
+| M7-09 | `[~]` Seed data produk asli + foto + zona ongkir | Data siap; import produksi & cek URL foto | 1 j |
+| M7-10 | `[~]` Go-live checklist: uji pesanan nyata, verifikasi transfer, notifikasi | Checklist siap; Telegram & order nyata belum | 1 j |
 
 **Catatan M7 (2026-11-26):**
 - `M7-04`: tujuh Dockerfile multi-stage (`CGO_ENABLED=0`, user non-root, healthcheck via
@@ -409,8 +409,9 @@ Semua item di bawah sudah tuntas. M7 baru dimulai setelah verifikasi penuh (cata
 - `M7-02`/`M7-05`/`M7-07`/`M7-08`: artefak sudah ada di repo (`docker-compose.prod.yml`,
   `infra/Caddyfile`, `prometheus.prod.yml`, `.github/workflows/cd.yml`, `backup.sh`,
   `infra/cron/`). Centang penuh menunggu VPS, domain, secret SSH/GHCR, dan `BACKUP_REMOTE`.
-- `M7-01`/`M7-03`/`M7-09`/`M7-10`: tidak bisa diselesaikan dari repo — butuh akses VPS,
-  domain, foto/data produk asli, dan pesanan nyata.
+- `M7-01`/`M7-03`/`M7-09`/`M7-10`: evaluasi & checklist ada di `docs/DEPLOY_CHECKLIST.md`.
+  Data produk sudah siap; yang masih dibutuhkan: hasil `check-vps.sh`, URL repo/owner GHCR,
+  domain + DNS, token/chat id Telegram, dan pesanan nyata untuk go-live.
 
 ---
 
