@@ -1,0 +1,173 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: saybu-deploy-main
+  cancel-in-progress: false
+
+jobs:
+  service-images:
+    name: Image ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [auth, catalog, shipping, order, payment, notification, gateway]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Normalisasi owner GHCR
+        id: meta
+        run: |
+          owner="$(printf '%s' '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          echo "owner=$owner" >> "$GITHUB_OUTPUT"
+
+      - name: Build & push
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: backend/services/${{ matrix.service }}/Dockerfile
+          platforms: linux/amd64
+          push: true
+          build-args: SERVICE=${{ matrix.service }}
+          tags: |
+            ghcr.io/${{ steps.meta.outputs.owner }}/saybu-${{ matrix.service }}:${{ github.sha }}
+            ghcr.io/${{ steps.meta.outputs.owner }}/saybu-${{ matrix.service }}:latest
+          cache-from: type=gha,scope=saybu-${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=saybu-${{ matrix.service }}
+
+  migrate-image:
+    name: Image migrator
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Normalisasi owner GHCR
+        id: meta
+        run: |
+          owner="$(printf '%s' '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          echo "owner=$owner" >> "$GITHUB_OUTPUT"
+
+      - name: Build & push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: backend/Dockerfile.migrate
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ghcr.io/${{ steps.meta.outputs.owner }}/saybu-migrate:${{ github.sha }}
+            ghcr.io/${{ steps.meta.outputs.owner }}/saybu-migrate:latest
+          cache-from: type=gha,scope=saybu-migrate
+          cache-to: type=gha,mode=max,scope=saybu-migrate
+
+  frontend:
+    name: Build frontend static
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: npm ci
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+          retention-days: 1
+
+  deploy:
+    name: Deploy ke VPS
+    runs-on: ubuntu-latest
+    needs: [service-images, migrate-image, frontend]
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+
+      - name: Normalisasi owner GHCR
+        id: meta
+        run: |
+          owner="$(printf '%s' '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          echo "owner=$owner" >> "$GITHUB_OUTPUT"
+
+      # dist dikirim terpisah agar VPS tidak perlu Node/npm.
+      - name: Kirim frontend/dist
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          source: frontend/dist
+          target: ${{ secrets.DEPLOY_PATH }}/frontend
+          strip_components: 1
+
+      - name: Pull image, migrasi, restart service
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          GHCR_OWNER: ${{ steps.meta.outputs.owner }}
+          IMAGE_TAG: ${{ github.sha }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_ACTOR: ${{ github.actor }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          envs: DEPLOY_PATH,GHCR_OWNER,IMAGE_TAG,GHCR_TOKEN,GHCR_ACTOR
+          script: |
+            set -euo pipefail
+            DEPLOY_PATH="${DEPLOY_PATH:-/opt/saybu}"
+            cd "$DEPLOY_PATH"
+            git fetch --all --prune
+            git fetch origin "${IMAGE_TAG}" || true
+            git checkout --force "${IMAGE_TAG}"
+
+            printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_ACTOR" --password-stdin
+
+            export GHCR_OWNER IMAGE_TAG
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml --profile migrate run --rm migrate
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            docker image prune -f
