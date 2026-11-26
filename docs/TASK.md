@@ -392,7 +392,7 @@ Semua item di bawah sudah tuntas. M7 baru dimulai setelah verifikasi penuh (cata
 | M7-02 | `[~]` `docker-compose.prod.yml` + Caddy (TLS, SPA fallback, uploads) | HTTPS aktif — file siap, menunggu domain & VPS | 1.5 j |
 | M7-03 | `[~]` Domain + DNS + email admin | Checklist DNS siap; domain belum dipilih | 0.5 j |
 | M7-04 | `[x]` Dockerfile semua service (multi-stage, non-root, healthcheck) | 7 Dockerfile + build statik; image terbesar terukur 47,7 MB | 1.5 j |
-| M7-05 | `[~]` GitHub Actions CD ke GHCR + deploy SSH | Workflow siap; menunggu secret VPS & GHCR | 1 j |
+| M7-05 | `[~]` GitHub Actions CD ke GHCR + deploy SSH | Repo terhubung & `main` ter-push; menunggu secret SSH VPS | 1 j |
 | M7-06 | `[x]` Job migrasi sebelum deploy service | `backend/Dockerfile.migrate` + `migrate-prod.sh` (up/down) | 0.5 j |
 | M7-07 | `[~]` Backup harian Postgres + upload object storage + retensi 7 hari | Skrip & cron siap; menunggu rclone remote di VPS | 1 j |
 | M7-08 | `[~]` Monitoring uptime + alert Telegram bila service down | Rule `up == 0` sudah ada; scrape produksi siap, perlu verifikasi setelah deploy | 0.5 j |
@@ -409,8 +409,12 @@ Semua item di bawah sudah tuntas. M7 baru dimulai setelah verifikasi penuh (cata
 - `M7-02`/`M7-05`/`M7-07`/`M7-08`: artefak sudah ada di repo (`docker-compose.prod.yml`,
   `infra/Caddyfile`, `prometheus.prod.yml`, `.github/workflows/cd.yml`, `backup.sh`,
   `infra/cron/`). Centang penuh menunggu VPS, domain, secret SSH/GHCR, dan `BACKUP_REMOTE`.
+- `M7-05`: repo `Jhonathanas/Saybu` terhubung sebagai `origin` (URL SSH agar push tanpa
+  username), cabang lokal diubah `master` → `main` sesuai trigger CD, dan `main` sudah
+  ter-push. Owner GHCR `jhonathanas` diambil otomatis oleh workflow dari
+  `github.repository_owner`; `.env.example` sudah memakai nilai tersebut.
 - `M7-01`/`M7-03`/`M7-09`/`M7-10`: evaluasi & checklist ada di `docs/DEPLOY_CHECKLIST.md`.
-  Data produk sudah siap; yang masih dibutuhkan: hasil `check-vps.sh`, URL repo/owner GHCR,
+  Data produk sudah siap; yang masih dibutuhkan: hasil `check-vps.sh`, secret SSH VPS,
   domain + DNS, token/chat id Telegram, dan pesanan nyata untuk go-live.
 
 ---
@@ -506,3 +510,4 @@ yang belum ada, tidak menimpa unggahan admin.
 | 2026-11-26 | **Utang teknis pra-deploy tuntas (TD-01..TD-07).** Audit log persisten via RPC `auth.v1.RecordAudit` + migrasi `audit_logs`; dedup notifikasi persisten di `saybu_notifications.processed_events` dengan pola `pending → sent / release`; alerting Grafana 4 rule → Telegram; E2E Playwright 8 test (checkout sukses, validasi, PICKUP/COD, lacak pesanan × mobile/desktop) dengan fixture API; CI `security` + `integration` + `e2e` + Dependabot; Go `1.26.11`; `npm audit`/`govulncheck` 0 temuan; RUNBOOK diselaraskan dengan 3 partisi Kafka. `make fmt && make lint && make test && make test-integration` hijau |
 | 2026-11-26 | **Gate sebelum M7:** seluruh utang teknis selesai; M6 = 9/9, M5 = 11/12 (M5-12 butuh partisipan nyata). Aplikasi masih bisa diuji manual di `http://localhost:5173` |
 | 2026-11-26 | **M7 dimulai dari sisi repo (2/10 tuntas).** Dockerfile multi-stage untuk 7 service + image `saybu-migrate`; `docker-compose.prod.yml` (Postgres/Kafka tanpa port host, Caddy TLS/SPA/uploads, profil `migrate`/`observability`), `infra/Caddyfile` dengan CSP & header keamanan, `prometheus.prod.yml`, workflow `cd.yml` (GHCR + SSH + kirim `frontend/dist`), backup 6 DB dengan gzip/retensi 7 hari/`BACKUP_REMOTE` rclone + cron. Verifikasi: `docker compose -f docker-compose.prod.yml config -q` lulus, Caddy `validate` lulus, binary statik 13–22 MB, image produksi auth 41 MB & order 47,7 MB, image migrasi smoke-test, backup/restore/migrasi diuji dengan stub, `bash -n` semua skrip. Deploy nyata masih menunggu VPS/domain/secret |
+| 2026-11-26 | **Repo GitHub terhubung.** `origin` = `git@github.com:Jhonathanas/Saybu.git` (autentikasi via kunci SSH lokal), cabang `master` diubah ke `main` sesuai trigger workflow CD, dan `main` ter-push (`cf3f20e`). Owner GHCR `jhonathanas`; `docs/DEPLOY_CHECKLIST.md` dan `.env.example` disesuaikan. Push ke `main` sekarang memicu build image ke GHCR; tahap deploy SSH belum bisa jalan sebelum secret `SSH_HOST`/`SSH_USER`/`SSH_KEY`/`DEPLOY_PATH` diisi |

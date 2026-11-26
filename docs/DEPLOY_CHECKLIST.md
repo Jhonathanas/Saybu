@@ -13,7 +13,7 @@ Terakhir diperbarui: 2026-11-26
 | Item | Status | Keterangan |
 |---|---|---|
 | VPS ≥ 4 GB + Docker | Perlu evaluasi | Jalankan `bash infra/scripts/check-vps.sh` di calon VPS |
-| Repo GitHub/GHCR | Sudah ada | **Dibutuhkan:** URL repo & owner GHCR (huruf kecil) |
+| Repo GitHub/GHCR | ✅ Terhubung | `https://github.com/Jhonathanas/Saybu.git` — owner GHCR `jhonathanas`; `main` sudah ter-push |
 | Domain + DNS | Belum ada | Perlu nama domain, A/AAAA record, email admin |
 | Data produk & foto | Siap | Perlu dimasukkan ke produksi lewat panel admin/seed |
 | Telegram bot | Belum ada | Token + chat id untuk notifikasi & alert Grafana |
@@ -26,7 +26,7 @@ Terakhir diperbarui: 2026-11-26
 Jalankan di VPS sebagai user yang akan menjalankan Docker:
 
 ```bash
-git clone <url-repo> /opt/saybu     # bila belum ada
+git clone https://github.com/Jhonathanas/Saybu.git /opt/saybu   # bila belum ada
 cd /opt/saybu
 bash infra/scripts/check-vps.sh
 ```
@@ -47,18 +47,17 @@ Script mengembalikan exit code 1 bila ada item `FAIL`.
 
 ## 2. GitHub / GHCR
 
-Berikan informasi berikut agar workflow `.github/workflows/cd.yml` bisa dipakai:
+Sudah terkonfigurasi (2026-11-26):
 
-- URL repo, mis. `https://github.com/<owner>/saybu`
-- Owner GHCR = `<owner>` dalam huruf kecil
-- Apakah package GHCR privat (default: privat; token `GITHUB_TOKEN` cukup untuk repo yang sama)
+- Repo: `https://github.com/Jhonathanas/Saybu.git`
+- Owner GHCR: `jhonathanas` (workflow menurunkan nilai ini otomatis dari
+  `github.repository_owner` huruf kecil, jadi tidak perlu hardcode)
+- Cabang `main` sudah ter-push dan tracking ke `origin/main`
+- Package GHCR bersifat privat; `GITHUB_TOKEN` bawaan Actions cukup untuk repo yang sama
 
-Setelah itu di lokal:
-
-```bash
-git remote add origin https://github.com/<owner>/saybu.git
-git push -u origin main
-```
+Remote lokal memakai URL SSH (`git@github.com:Jhonathanas/Saybu.git`) agar push tidak
+perlu memasukkan username; clone di VPS tetap memakai URL HTTPS di atas. Untuk push
+berikutnya cukup `git push`.
 
 Secrets GitHub (Settings → Environments → `production` → Secrets):
 
