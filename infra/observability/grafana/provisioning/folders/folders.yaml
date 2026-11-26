@@ -1,0 +1,6 @@
+apiVersion: 1
+
+folders:
+  - orgId: 1
+    name: Saybu Alerts
+    uid: saybu-alerts

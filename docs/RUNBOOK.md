@@ -354,6 +354,24 @@ make observability-down
 - Bila target `down`: pastikan service Go hidup dan port admin benar; cek
   `extra_hosts: host.docker.internal:host-gateway` ada di compose.
 
+### Alerting
+
+Aturan dan contact point di-provision otomatis dari
+`infra/observability/grafana/provisioning/alerting/`：
+
+| Alert | Kondisi | `for` | Severity |
+|---|---|---|---|
+| `saybu-service-down` | `up == 0` pada 7 job | 2m | critical |
+| `saybu-http-5xx` | rasio 5xx gateway > 5% | 5m | warning |
+| `saybu-kafka-lag` | lag consumer > 100 pesan | 10m | warning |
+| `saybu-outbox-lag` | event outbox tertua > 300 detik | 5m | critical |
+
+Cek aturan: `curl -u admin:admin http://localhost:3000/api/v1/provisioning/alert-rules`.
+Variable `$TELEGRAM_BOT_TOKEN` dan `$TELEGRAM_ADMIN_CHAT_ID` diisi dari `.env` lewat compose.
+Tanpa kredensial, provisioning memakai placeholder `disabled` supaya aturan tetap aktif;
+pesan gagal dikirim dan tercatat di log Grafana. Setelah mengubah kredensial, restart Grafana
+atau reload provisioning via API admin.
+
 ---
 
 ## 15. Load test

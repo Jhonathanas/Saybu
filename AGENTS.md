@@ -36,7 +36,7 @@ tampilan, tetapi tetap terjemahkan ke token shadcn yang ada — lihat `SKILL.md`
 - [x] **M3 Order** — shipping zones & kuotasi, order service (saga checkout, state machine, idempotensi, job expire), gateway order, konsumer stok, frontend checkout + halaman sukses + lacak pesanan
 - [x] **M4 Payment & Notifikasi** — payment service (bukti transfer, verifikasi admin, status), konsumer order & catalog, notifikasi Telegram, frontend panel pembayaran + admin verifikasi
 - [~] **M5 Kelengkapan** — riwayat pesanan akun, admin pesanan (daftar/detail/ubah status) & ringkasan harian, pembatalan pembeli, COD lunas saat selesai, notifikasi stok menipis, halaman 404/500 + error boundary, SEO dasar, audit mutasi admin. `M5-12` uji usability dengan orangtua masih pending.
-- [x] **M6 Observability & hardening** — metrik Prometheus semua service, dashboard Grafana, propagasi `request_id` HTTP→gRPC→event→log, rate limit seluruh endpoint, security review (`docs/SECURITY.md`), load test k6, uji restore backup, runbook (`docs/RUNBOOK.md`)
+- [x] **M6 Observability & hardening** — metrik Prometheus semua service, dashboard Grafana + alerting Telegram, propagasi `request_id` HTTP→gRPC→event→log, rate limit seluruh endpoint, security review (`docs/SECURITY.md`), load test k6, uji restore backup, runbook (`docs/RUNBOOK.md`)
 - [ ] M7 Deploy
 
 > Saat mulai bekerja, perbarui bagian ini dan centang task terkait di `docs/TASK.md`.

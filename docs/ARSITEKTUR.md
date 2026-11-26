@@ -340,6 +340,10 @@ Checklist lengkap & tindak lanjut: `docs/SECURITY.md`.
   Prometheus men-scrape gateway `:8081` dan admin `:9101`–`:9105` serta notification `:8086` lewat
   `host.docker.internal`. Dashboard ter-provision: `infra/observability/grafana/dashboards/saybu.json`
   (8 panel: HTTP rate/p95/5xx, gRPC rate/p95, consumer lag, outbox lag, pesanan/menit).
+- **Alerting:** aturan Grafana ter-provision di `infra/observability/grafana/provisioning/alerting`
+  (service down, rasio 5xx gateway, Kafka consumer lag > 100, outbox lag > 5 menit) dan dikirim ke
+  contact point Telegram. Token/chat id dibaca dari environment Grafana; tanpa kredensial nilai
+  placeholder `disabled` dipakai agar provisioning tetap valid (notifikasi gagal, aturan tetap aktif).
 - **Audit admin:** middleware di gateway mencatat setiap mutasi admin yang berhasil
   (POST/PATCH/DELETE di bawah `/admin`) sebagai log terstruktur: `actor`, `action`, `path`, `status`,
   `request_id`, lalu menyimpannya persisten ke tabel `audit_logs` di `saybu_auth` lewat

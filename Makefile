@@ -31,6 +31,7 @@ observability: ## Jalankan Prometheus + Grafana (profil observability)
 	$(COMPOSE) --profile observability up -d prometheus grafana
 	@echo "Prometheus: http://localhost:9090"
 	@echo "Grafana:    http://localhost:3000 ($${GRAFANA_USER:-admin}/$${GRAFANA_PASSWORD:-admin})"
+	@echo "Alert:      folder 'Saybu Alerts' → Telegram (butuh TELEGRAM_BOT_TOKEN & TELEGRAM_ADMIN_CHAT_ID)"
 
 observability-down: ## Hentikan Prometheus + Grafana
 	$(COMPOSE) --profile observability down prometheus grafana

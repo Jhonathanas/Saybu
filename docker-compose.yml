@@ -111,6 +111,11 @@ services:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
       GF_USERS_ALLOW_SIGN_UP: "false"
+      # Dipakai provisioning contact point Telegram untuk alerting.
+      # Placeholder membuat provisioning tetap valid tanpa kredensial; isi .env
+      # dengan token/chat id asli agar notifikasi alert benar-benar terkirim.
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-disabled}
+      TELEGRAM_ADMIN_CHAT_ID: ${TELEGRAM_ADMIN_CHAT_ID:-disabled}
     volumes:
       - ./infra/observability/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./infra/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro

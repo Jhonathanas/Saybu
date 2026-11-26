@@ -21,7 +21,7 @@
 | Reverse proxy / TLS | Caddy | 2.10 |
 | CI/CD | GitHub Actions | — |
 | Notifikasi | Telegram Bot API | — |
-| Observability | Prometheus + Grafana (opsional) | 3.x / 12.x |
+| Observability | Prometheus + Grafana (opsional) | 3.x / 11.x |
 
 ---
 
@@ -303,7 +303,8 @@ make dev-frontend       # terminal lain
 Buka `http://localhost:5173` (toko) dan `http://localhost:5173/admin` (panel).
 Kafka UI: `http://localhost:8090`. Health service: `:8081`, `:9101`–`:9105`, `:8086`.
 Observability (opsional): `make observability` → Prometheus `http://localhost:9090`, Grafana
-`http://localhost:3000` (`admin`/`admin`).
+`http://localhost:3000` (`admin`/`admin`). Alert rules + contact point Telegram ter-provision
+di folder Grafana `Saybu Alerts` (butuh `TELEGRAM_BOT_TOKEN` & `TELEGRAM_ADMIN_CHAT_ID`).
 
 ---
 

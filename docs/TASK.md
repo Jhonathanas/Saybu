@@ -20,7 +20,7 @@
 | M3 | Ongkir & order | 16 | 16 | ✅ |
 | M4 | Pembayaran & notifikasi | 14 | 14 | ✅ |
 | M5 | Kelengkapan | 12 | 11 | 🟡 |
-| M6 | Observability & hardening | 8 | 8 | ✅ |
+| M6 | Observability & hardening | 9 | 9 | ✅ |
 | M7 | Deploy | 10 | 0 | ⬜ |
 
 > **M5 = 11/12:** seluruh fitur selesai, tetapi `M5-12` (uji usability panel dengan orangtua)
@@ -317,8 +317,14 @@
 | M6-06 | `[x]` Load test k6 (100 VU katalog + 10 checkout/detik) | p95 < 300 ms lokal | 1 j |
 | M6-07 | `[x]` Uji restore backup | Data kembali utuh | 1 j |
 | M6-08 | `[x]` Dokumentasi operasional (runbook) | Ada panduan insiden | 1 j |
+| M6-09 | `[x]` Alerting Prometheus/Grafana → Telegram (service down, 5xx, Kafka lag, outbox lag) | Rule tampil & contact point valid | 1 j |
 
 **Catatan M6:**
+- **M6-09 alerting:** provisioning Grafana di `infra/observability/grafana/provisioning/alerting`
+  (4 rule + contact point Telegram + notification policy). Token/chat id dari environment;
+  placeholder `disabled` dipakai saat kredensial kosong agar provisioning tetap valid.
+  Diverifikasi: 4 rule muncul via `/api/v1/provisioning/alert-rules`, root policy mengarah ke
+  `telegram-admin`. Panduan: RUNBOOK §14.
 - **M6-03 korelasi:** `kafkax.NewEventCtx(ctx, …)` mengisi `correlation_id` dari `request_id` context;
   semua pembangun event (order/catalog/payment) meneruskan `ctx`. Consumer menyemai `request_id` handler
   dari `correlation_id` (cadangan `event_id`). Diverifikasi end-to-end: `X-Request-Id` HTTP → gRPC →
