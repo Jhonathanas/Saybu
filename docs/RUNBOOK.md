@@ -441,6 +441,44 @@ Bila skema berubah, restore dari snapshot terakhir terlebih dahulu (§9).
 **Catatan:** domain/DNS, sertifikat, dan seed produk asli bukan bagian dari workflow;
 lihat `docs/TASK.md` M7-01/03/09.
 
+## 18. Uji produksi lokal (tanpa VPS/GHCR/domain)
+
+Bisa dijalankan di mesin development yang sudah punya Docker + Compose v2. Memakai
+artefak produksi yang sama, tetapi image di-build lokal, HTTP di `http://localhost`,
+dan notifikasi Telegram dinonaktifkan. Berguna untuk memvalidasi perubahan sebelum VPS tersedia.
+
+**Prasyarat:** `frontend/dist` sudah ter-build (`npm --prefix frontend run build`) dan
+`.env.prod.local` berisi nilai dummy (ter-gitignore). Jangan pakai secret produksi di sini.
+
+```bash
+make local-prod-build     # build 7 service + image migrate dari Dockerfile
+make local-prod-up        # start stack, container berprefix saybu-local-*
+make local-prod-migrate   # goose up ke 6 DB (sekali setelah volume baru)
+make local-prod-seed      # seed idempoten: 2 kategori, 12 produk, admin, 4 zona
+make local-prod-logs      # opsional: ikuti log
+make local-prod-down      # hentikan stack
+```
+
+**Alamat:** `http://localhost` (SPA + API), `/healthz`, `/readyz`, `/admin`.
+Postgres host `localhost:5433`, Kafka `localhost:29092`. Akun admin seed:
+`admin@saybu.test` / `admin12345`.
+
+**Alur yang sudah diverifikasi (2026-11-26):**
+- Checkout PICKUP COD → payment `COD_PENDING`; pelacakan via `?phone=`;
+  status `PENDING_PAYMENT → PAID → PREPARING → READY_PICKUP → COMPLETED`
+  membuat payment menjadi `COD_PAID` lewat event `order.status_changed`.
+- Checkout PICKUP TRANSFER → upload bukti PNG → `WAITING_VERIFICATION` →
+  admin approve → `PAID` dan order ikut `PAID`.
+- Akses `/orders/{code}/payment` untuk guest **wajib** `?phone=` yang cocok;
+  tanpa/phone salah sengaja 404 agar tidak membocorkan pembayaran orang lain.
+- `/uploads/*` dilayani Caddy dari volume bersama gateway; `uri strip_prefix /uploads`
+  wajib ada supaya path tidak dobel. `/healthz` dan `/readyz` juga harus punya
+  `handle` sendiri sebelum SPA fallback.
+
+**Batasan lokal:** tanpa TLS, tanpa GHCR, tanpa notifikasi Telegram (event masuk DLQ
+dengan error `telegram: status 404` sampai token diisi), dan tanpa backup ke object
+storage. Ini bukan pengganti verifikasi produksi di VPS.
+
 ---
 
 ## Referensi

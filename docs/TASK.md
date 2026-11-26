@@ -27,8 +27,10 @@
 > belum dijalankan karena butuh partisipan nyata. Gate M5 baru dianggap penuh setelah ada
 > catatan hasil uji dan perbaikan kecilnya.
 
-> **M7 = 2/10 selesai:** Dockerfile & image migrasi tuntas. `M7-02/05/07/08` sudah punya
-> artefak di repo tetapi baru bisa diverifikasi setelah VPS, domain, dan kredensial tersedia.
+> **M7 = 2/10 selesai:** Dockerfile & image migrasi tuntas. Artefak produksi sudah
+> diuji end-to-end secara lokal lewat `docker-compose.prod.local.yml` (RUNBOOK §18):
+> checkout COD & TRANSFER, upload bukti, verifikasi admin, COD lunas, audit & dedup.
+> `M7-02/05/07/08` menunggu VPS, domain, dan kredensial untuk verifikasi produksi;
 > `M7-01/03/09/10` menunggu keputusan/akses eksternal.
 
 ---
@@ -406,6 +408,12 @@ Semua item di bawah sudah tuntas. M7 baru dimulai setelah verifikasi penuh (cata
 - `M7-06`: image `saybu-migrate` membawa goose + semua migrasi; dijalankan lewat
   `docker compose -f docker-compose.prod.yml --profile migrate run --rm migrate` sebelum
   `up -d`. Skrip mendukung `up` dan `down` serta melewati DSN kosong.
+- Uji produksi lokal (2026-11-26): `docker-compose.prod.local.yml` + `infra/Caddyfile.local`
+  + target `make local-prod-*` menjalankan image produksi di `http://localhost` tanpa
+  GHCR/domain/TLS. Migrasi 6 DB, seed, checkout COD & TRANSFER, upload bukti, verifikasi
+  admin, COD lunas saat `COMPLETED`, audit log persisten, dan dedup notifikasi lolos.
+  Dua perbaikan dari uji ini: `handle /healthz` & `/readyz` sebelum SPA fallback, serta
+  `uri strip_prefix /uploads` agar berkas tidak 404. Detail di `docs/RUNBOOK.md` §18.
 - `M7-02`/`M7-05`/`M7-07`/`M7-08`: artefak sudah ada di repo (`docker-compose.prod.yml`,
   `infra/Caddyfile`, `prometheus.prod.yml`, `.github/workflows/cd.yml`, `backup.sh`,
   `infra/cron/`). Centang penuh menunggu VPS, domain, secret SSH/GHCR, dan `BACKUP_REMOTE`.

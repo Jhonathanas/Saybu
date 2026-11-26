@@ -1,0 +1,45 @@
+# Caddy untuk menguji stack produksi secara lokal (tanpa domain & TLS publik).
+# Dipakai bersama docker-compose.prod.local.yml. Situs dilayani di http://localhost.
+# HTTPS asli tetap diuji di VPS lewat infra/Caddyfile.
+
+{
+	auto_https off
+}
+
+http://localhost {
+	encode zstd gzip
+
+	# HSTS sengaja tidak dipasang di sini (tidak relevan untuk HTTP lokal).
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		Permissions-Policy "geolocation=(), microphone=(), camera=()"
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+	}
+
+	# Health check harus diteruskan ke gateway, bukan dijawab SPA fallback.
+	handle /healthz {
+		reverse_proxy gateway:8081
+	}
+
+	handle /readyz {
+		reverse_proxy gateway:8081
+	}
+
+	handle /api/* {
+		reverse_proxy gateway:8081
+	}
+
+	handle /uploads/* {
+		uri strip_prefix /uploads
+		root * /srv/uploads
+		file_server
+	}
+
+	handle {
+		root * /srv/frontend
+		try_files {path} /index.html
+		file_server
+	}
+}

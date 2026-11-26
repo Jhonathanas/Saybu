@@ -19,11 +19,21 @@
 		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
 	}
 
+	# Health check harus diteruskan ke gateway, bukan dijawab SPA fallback.
+	handle /healthz {
+		reverse_proxy gateway:8081
+	}
+
+	handle /readyz {
+		reverse_proxy gateway:8081
+	}
+
 	handle /api/* {
 		reverse_proxy gateway:8081
 	}
 
 	handle /uploads/* {
+		uri strip_prefix /uploads
 		root * /srv/uploads
 		file_server
 	}

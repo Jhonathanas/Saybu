@@ -5,8 +5,9 @@ GO      ?= go
 COMPOSE ?= docker compose
 BUF     ?= buf
 SERVICES := gateway auth catalog shipping order payment notification
+COMPOSE_LOCAL := docker compose --env-file .env.prod.local -p saybu-local -f docker-compose.prod.yml -f docker-compose.prod.local.yml
 
-.PHONY: help up down logs ps restart proto migrate migrate-down seed dev dev-frontend test test-frontend test-e2e test-integration lint lint-frontend fmt build clean observability observability-down load-test backup restore prod-up prod-migrate prod-logs prod-config
+.PHONY: help up down logs ps restart proto migrate migrate-down seed dev dev-frontend test test-frontend test-e2e test-integration lint lint-frontend fmt build clean observability observability-down load-test backup restore prod-up prod-migrate prod-logs prod-config local-prod-build local-prod-up local-prod-migrate local-prod-seed local-prod-logs local-prod-down
 
 help: ## Tampilkan daftar target
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -60,6 +61,29 @@ prod-up: ## Deploy lokal image produksi yang sudah di-pull
 
 prod-logs: ## Ikuti log semua service produksi
 	docker compose -f docker-compose.prod.yml logs -f --tail=100
+
+local-prod-build: ## Build image produksi untuk uji lokal (tanpa GHCR)
+	$(COMPOSE_LOCAL) --profile migrate build
+
+local-prod-up: ## Jalankan stack produksi di lokal (http://localhost)
+	$(COMPOSE_LOCAL) up -d --remove-orphans
+	@echo "Saybu lokal: http://localhost"
+
+local-prod-migrate: ## Migrasi DB pada stack produksi lokal
+	$(COMPOSE_LOCAL) --profile migrate run --rm migrate
+
+local-prod-seed: ## Seed data contoh ke stack produksi lokal
+	cd backend && \
+	  AUTH_DB_DSN='postgres://saybu:saybu@localhost:5433/saybu_auth?sslmode=disable' \
+	  CATALOG_DB_DSN='postgres://saybu:saybu@localhost:5433/saybu_catalog?sslmode=disable' \
+	  SHIPPING_DB_DSN='postgres://saybu:saybu@localhost:5433/saybu_shipping?sslmode=disable' \
+	  $(GO) run ./cmd/seed
+
+local-prod-logs: ## Ikuti log stack produksi lokal
+	$(COMPOSE_LOCAL) logs -f --tail=100
+
+local-prod-down: ## Hentikan stack produksi lokal
+	$(COMPOSE_LOCAL) down
 
 proto: ## Generate kode dari protobuf
 	cd backend/proto && $(BUF) lint && $(BUF) generate

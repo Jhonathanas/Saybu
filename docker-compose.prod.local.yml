@@ -1,0 +1,110 @@
+# Override untuk menjalankan artefak produksi di mesin lokal.
+# Tidak memakai GHCR, domain, sertifikat, atau port 443.
+#
+#   docker compose --env-file .env.prod.local -p saybu-local \
+#     -f docker-compose.prod.yml -f docker-compose.prod.local.yml \
+#     --profile migrate build
+#   docker compose --env-file .env.prod.local -p saybu-local \
+#     -f docker-compose.prod.yml -f docker-compose.prod.local.yml up -d
+#
+# Nama container diberi awalan saybu-local agar tidak bentrok dengan stack dev
+# (docker-compose.yml). Postgres diekspos di 5433 dan Kafka di 29092 supaya
+# seed/psql bisa dijalankan dari host. Target make: make local-prod-*.
+
+services:
+  postgres:
+    container_name: saybu-local-postgres
+    ports:
+      - "5433:5432"
+
+  kafka:
+    container_name: saybu-local-kafka
+    ports:
+      - "29092:9092"
+
+  kafka-init:
+    container_name: saybu-local-kafka-init
+
+  auth:
+    container_name: saybu-local-auth
+    image: saybu-local/auth:local
+    build:
+      context: backend
+      dockerfile: services/auth/Dockerfile
+      args:
+        SERVICE: auth
+
+  catalog:
+    container_name: saybu-local-catalog
+    image: saybu-local/catalog:local
+    build:
+      context: backend
+      dockerfile: services/catalog/Dockerfile
+      args:
+        SERVICE: catalog
+
+  shipping:
+    container_name: saybu-local-shipping
+    image: saybu-local/shipping:local
+    build:
+      context: backend
+      dockerfile: services/shipping/Dockerfile
+      args:
+        SERVICE: shipping
+
+  order:
+    container_name: saybu-local-order
+    image: saybu-local/order:local
+    build:
+      context: backend
+      dockerfile: services/order/Dockerfile
+      args:
+        SERVICE: order
+
+  payment:
+    container_name: saybu-local-payment
+    image: saybu-local/payment:local
+    build:
+      context: backend
+      dockerfile: services/payment/Dockerfile
+      args:
+        SERVICE: payment
+
+  notification:
+    container_name: saybu-local-notification
+    image: saybu-local/notification:local
+    build:
+      context: backend
+      dockerfile: services/notification/Dockerfile
+      args:
+        SERVICE: notification
+
+  gateway:
+    container_name: saybu-local-gateway
+    image: saybu-local/gateway:local
+    build:
+      context: backend
+      dockerfile: services/gateway/Dockerfile
+      args:
+        SERVICE: gateway
+    environment:
+      GATEWAY_CORS_ORIGINS: http://localhost
+      COOKIE_SECURE: "false"
+
+  migrate:
+    container_name: saybu-local-migrate
+    image: saybu-local/migrate:local
+    build:
+      context: .
+      dockerfile: backend/Dockerfile.migrate
+
+  caddy:
+    container_name: saybu-local-caddy
+    ports:
+      - "80:80"
+    volumes:
+      - ./infra/Caddyfile.local:/etc/caddy/Caddyfile:ro
+      - ./frontend/dist:/srv/frontend:ro
+      - uploads:/srv/uploads:ro
+      - caddydata:/data
+      - caddyconfig:/config
