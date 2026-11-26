@@ -39,6 +39,9 @@ type stubService struct {
 	listTotal int64
 	listPage  int
 	listErr   error
+
+	auditIn  domain.AuditEntry
+	auditErr error
 }
 
 func (s *stubService) Register(context.Context, service.RegisterInput) (service.AuthResult, error) {
@@ -56,6 +59,10 @@ func (s *stubService) GetUser(context.Context, string) (domain.User, error) {
 }
 func (s *stubService) ListUsers(context.Context, int, int, string) ([]domain.User, int64, int, error) {
 	return s.users, s.listTotal, s.listPage, s.listErr
+}
+func (s *stubService) RecordAudit(_ context.Context, in domain.AuditEntry) error {
+	s.auditIn = in
+	return s.auditErr
 }
 
 func startServer(t *testing.T, svc Service) authv1.AuthServiceClient {
@@ -169,5 +176,36 @@ func TestListUsers(t *testing.T) {
 	}
 	if len(resp.GetUsers()) != 1 || resp.GetTotal() != 1 || resp.GetLimit() != 20 {
 		t.Fatalf("resp = %+v", resp)
+	}
+}
+
+func TestRecordAudit(t *testing.T) {
+	stub := &stubService{}
+	client := startServer(t, stub)
+
+	_, err := client.RecordAudit(context.Background(), &authv1.RecordAuditRequest{
+		ActorId: "u-admin", ActorRole: "admin", Action: "DELETE",
+		Path: "/api/v1/admin/products/p-1", Status: 204, RequestId: "req-9",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := domain.AuditEntry{
+		ActorID: "u-admin", ActorRole: "admin", Action: "DELETE",
+		Path: "/api/v1/admin/products/p-1", Status: 204, RequestID: "req-9",
+	}
+	if stub.auditIn != want {
+		t.Fatalf("auditIn = %+v, want %+v", stub.auditIn, want)
+	}
+}
+
+func TestRecordAuditValidationError(t *testing.T) {
+	stub := &stubService{auditErr: (&domain.ValidationError{}).Add("actor_id", "wajib")}
+	client := startServer(t, stub)
+
+	_, err := client.RecordAudit(context.Background(), &authv1.RecordAuditRequest{})
+	st, _ := status.FromError(err)
+	if st.Code() != codes.InvalidArgument {
+		t.Fatalf("code = %v, want InvalidArgument", st.Code())
 	}
 }

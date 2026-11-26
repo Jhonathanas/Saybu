@@ -19,9 +19,13 @@
 | M2 | Katalog | 15 | 15 | ✅ |
 | M3 | Ongkir & order | 16 | 16 | ✅ |
 | M4 | Pembayaran & notifikasi | 14 | 14 | ✅ |
-| M5 | Kelengkapan | 12 | 12 | ✅ |
+| M5 | Kelengkapan | 12 | 11 | 🟡 |
 | M6 | Observability & hardening | 8 | 8 | ✅ |
 | M7 | Deploy | 10 | 0 | ⬜ |
+
+> **M5 = 11/12:** seluruh fitur selesai, tetapi `M5-12` (uji usability panel dengan orangtua)
+> belum dijalankan karena butuh partisipan nyata. Gate M5 baru dianggap penuh setelah ada
+> catatan hasil uji dan perbaikan kecilnya.
 
 ---
 
@@ -287,8 +291,10 @@
   hanya hari ini).
 - **`low_stock`** digabung di gateway dari `catalog.ListLowStock` (satu DB per service dijaga); bila
   panggilan katalog gagal, daftar kosong + log peringatan (ringkasan tetap tampil).
-- **Audit log** saat ini berupa log terstruktur di gateway (bukan tabel). `audit_logs` persisten ditunda
-  ke fase lanjut; perubahan status pesanan tetap tercatat di `order_status_history`.
+- **Audit log** persisten di tabel `audit_logs` (database `saybu_auth`) lewat RPC
+  `auth.v1.AuthService.RecordAudit` dari gateway; log terstruktur tetap dipertahankan sebagai
+  fallback. `request_id` menjadi kunci idempotensi. Perubahan status pesanan tetap tercatat di
+  `order_status_history`.
 - **`stock.low`** ditulis lewat outbox pada transaksi `ReserveStock` saat checkout menembus ambang
   (sekali per pelanggaran ambang), juga tetap dipancarkan dari jalur update stok produk.
 - **SEO/OG:** `og-image.svg` & `favicon.svg` adalah placeholder SVG; ganti OG image raster + domain

@@ -28,6 +28,7 @@ type Service interface {
 	Logout(ctx context.Context, rawToken string) error
 	GetUser(ctx context.Context, id string) (domain.User, error)
 	ListUsers(ctx context.Context, page, limit int, query string) ([]domain.User, int64, int, error)
+	RecordAudit(ctx context.Context, in domain.AuditEntry) error
 }
 
 // Server membungkus usecase auth sebagai gRPC.
@@ -119,6 +120,22 @@ func (s *Server) ListUsers(ctx context.Context, req *authv1.ListUsersRequest) (*
 		out.Users = append(out.Users, toProtoUser(u))
 	}
 	return out, nil
+}
+
+// RecordAudit menyimpan audit mutasi admin secara persisten.
+func (s *Server) RecordAudit(ctx context.Context, req *authv1.RecordAuditRequest) (*emptypb.Empty, error) {
+	err := s.svc.RecordAudit(ctx, domain.AuditEntry{
+		ActorID:   req.GetActorId(),
+		ActorRole: req.GetActorRole(),
+		Action:    req.GetAction(),
+		Path:      req.GetPath(),
+		Status:    int(req.GetStatus()),
+		RequestID: req.GetRequestId(),
+	})
+	if err != nil {
+		return nil, s.toStatus(err)
+	}
+	return &emptypb.Empty{}, nil
 }
 
 func limitOrDefault(limit int32) int {

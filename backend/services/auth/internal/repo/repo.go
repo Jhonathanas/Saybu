@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"saybu/pkg/ids"
 	"saybu/services/auth/internal/domain"
 )
 
@@ -217,6 +218,20 @@ func (r *Repo) RevokeAllRefreshTokens(ctx context.Context, userID string, now ti
 		userID, now)
 	if err != nil {
 		return fmt.Errorf("repo: revoke all refresh tokens: %w", err)
+	}
+	return nil
+}
+
+// InsertAudit menyimpan satu entri audit. request_id yang sama tidak ditulis ulang
+// (idempotensi saat gateway retry); request_id kosong selalu ditulis.
+func (r *Repo) InsertAudit(ctx context.Context, a domain.AuditEntry) error {
+	_, err := r.pool.Exec(ctx, `
+		INSERT INTO audit_logs (id, actor_id, actor_role, action, path, status, request_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		ON CONFLICT (request_id) WHERE request_id <> '' DO NOTHING
+	`, ids.New(), a.ActorID, a.ActorRole, a.Action, a.Path, a.Status, a.RequestID)
+	if err != nil {
+		return fmt.Errorf("repo: insert audit: %w", err)
 	}
 	return nil
 }

@@ -14,6 +14,8 @@ service AuthService {
   rpc Logout(LogoutRequest) returns (google.protobuf.Empty);
   rpc GetUser(GetUserRequest) returns (User);
   rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
+  // RecordAudit menyimpan audit mutasi admin secara persisten (internal).
+  rpc RecordAudit(RecordAuditRequest) returns (google.protobuf.Empty);
 }
 
 message User {
@@ -68,4 +70,13 @@ message AuthResponse {
   int64 expires_in = 3;        // detik
   string refresh_token = 4;    // hanya dipakai gateway (cookie HttpOnly)
   int64 refresh_expires_in = 5; // detik
+}
+
+message RecordAuditRequest {
+  string actor_id = 1;
+  string actor_role = 2;
+  string action = 3;      // metode HTTP: POST/PATCH/PUT/DELETE
+  string path = 4;
+  int32 status = 5;
+  string request_id = 6;  // dipakai untuk idempotensi; boleh kosong
 }

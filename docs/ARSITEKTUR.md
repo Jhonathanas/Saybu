@@ -336,10 +336,11 @@ Checklist lengkap & tindak lanjut: `docs/SECURITY.md`.
   Prometheus men-scrape gateway `:8081` dan admin `:9101`–`:9105` serta notification `:8086` lewat
   `host.docker.internal`. Dashboard ter-provision: `infra/observability/grafana/dashboards/saybu.json`
   (8 panel: HTTP rate/p95/5xx, gRPC rate/p95, consumer lag, outbox lag, pesanan/menit).
-- **Audit admin (M5):** middleware di gateway mencatat setiap mutasi admin yang berhasil
+- **Audit admin:** middleware di gateway mencatat setiap mutasi admin yang berhasil
   (POST/PATCH/DELETE di bawah `/admin`) sebagai log terstruktur: `actor`, `action`, `path`, `status`,
-  `request_id`. Tabel `audit_logs` persisten ditunda (lihat §15). Perubahan status pesanan tetap
-  tersimpan di `order_status_history`.
+  `request_id`, lalu menyimpannya persisten ke tabel `audit_logs` di `saybu_auth` lewat
+  `auth.v1.AuthService.RecordAudit` (timeout 3 detik, best-effort). `request_id` dipakai sebagai
+  kunci idempotensi. Perubahan status pesanan tetap tersimpan di `order_status_history`.
 
 Panduan penanganan insiden: `docs/RUNBOOK.md`.
 
@@ -386,4 +387,4 @@ Panduan penanganan insiden: `docs/RUNBOOK.md`.
 - **Read model laporan**: consumer membangun tabel agregat harian.
 - **gRPC-Web / Connect**: bila ingin menghapus gateway REST.
 - **Redpanda**: pengganti Kafka hemat RAM, API kompatibel.
-- **Multi-admin & audit log persisten**: tabel `audit_logs` + role granular (M5 baru mencatat audit mutasi admin sebagai log terstruktur di gateway).
+- **Role granular**: `audit_logs` persisten sudah tersedia; yang tersisa untuk multi-admin adalah role selain `customer`/`admin` (mis. `staff`) beserta kebijakan aksesnya.

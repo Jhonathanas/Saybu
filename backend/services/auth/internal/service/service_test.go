@@ -16,6 +16,7 @@ type fakeRepo struct {
 	mu     sync.Mutex
 	users  map[string]domain.User
 	tokens map[string]domain.RefreshToken
+	audits []domain.AuditEntry
 }
 
 func newFakeRepo() *fakeRepo {
@@ -135,6 +136,13 @@ func (f *fakeRepo) RevokeAllRefreshTokens(_ context.Context, userID string, now 
 			f.tokens[hash] = t
 		}
 	}
+	return nil
+}
+
+func (f *fakeRepo) InsertAudit(_ context.Context, a domain.AuditEntry) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.audits = append(f.audits, a)
 	return nil
 }
 
@@ -298,5 +306,54 @@ func TestGetUserAndListUsers(t *testing.T) {
 	}
 	if len(users) != 1 || total != 1 || page != 1 {
 		t.Fatalf("users=%d total=%d page=%d", len(users), total, page)
+	}
+}
+
+func TestRecordAudit(t *testing.T) {
+	tests := []struct {
+		name    string
+		in      domain.AuditEntry
+		wantErr bool
+	}{
+		{
+			name: "valid",
+			in: domain.AuditEntry{
+				ActorID: "u-admin", ActorRole: "admin", Action: "PATCH",
+				Path: "/api/v1/admin/orders/o-1/status", Status: 200, RequestID: "req-1",
+			},
+		},
+		{
+			name: "actor kosong",
+			in: domain.AuditEntry{
+				ActorRole: "admin", Action: "POST", Path: "/x", Status: 201,
+			},
+			wantErr: true,
+		},
+		{
+			name: "status invalid",
+			in: domain.AuditEntry{
+				ActorID: "u-admin", ActorRole: "admin", Action: "POST", Path: "/x", Status: 0,
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc, repo := newTestService(t)
+			err := svc.RecordAudit(context.Background(), tt.in)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("RecordAudit err = %v, wantErr = %v", err, tt.wantErr)
+			}
+			if tt.wantErr {
+				if len(repo.audits) != 0 {
+					t.Fatalf("audit invalid tidak boleh disimpan: %+v", repo.audits)
+				}
+				return
+			}
+			if len(repo.audits) != 1 || repo.audits[0].RequestID != "req-1" {
+				t.Fatalf("audits = %+v", repo.audits)
+			}
+		})
 	}
 }

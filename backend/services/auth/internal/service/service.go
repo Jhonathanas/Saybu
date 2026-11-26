@@ -23,6 +23,7 @@ type Repo interface {
 	RotateRefreshToken(ctx context.Context, oldHash string, newToken domain.RefreshToken, now time.Time) (domain.User, error)
 	RevokeRefreshTokenByHash(ctx context.Context, hash string, now time.Time) error
 	RevokeAllRefreshTokens(ctx context.Context, userID string, now time.Time) error
+	InsertAudit(ctx context.Context, a domain.AuditEntry) error
 }
 
 // Options konfigurasi Service.
@@ -192,6 +193,14 @@ func (s *Service) Logout(ctx context.Context, rawToken string) error {
 		return nil
 	}
 	return s.repo.RevokeRefreshTokenByHash(ctx, authn.HashRefreshToken(rawToken), s.now())
+}
+
+// RecordAudit menyimpan catatan mutasi admin yang dikirim gateway.
+func (s *Service) RecordAudit(ctx context.Context, in domain.AuditEntry) error {
+	if err := domain.ValidateAudit(in); err != nil {
+		return err
+	}
+	return s.repo.InsertAudit(ctx, in)
 }
 
 // GetUser mengambil profil user.

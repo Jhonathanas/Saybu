@@ -118,3 +118,47 @@ func TestRepoIntegration(t *testing.T) {
 		t.Fatalf("ListUsers = %d, %d, %v", len(users), total, err)
 	}
 }
+
+func TestAuditIntegration(t *testing.T) {
+	dsn := os.Getenv("AUTH_DB_DSN")
+	if dsn == "" {
+		t.Skip("AUTH_DB_DSN tidak diset")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	pool, err := pgxpool.New(ctx, dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(pool.Close)
+	if err := pool.Ping(ctx); err != nil {
+		t.Skipf("postgres tidak tersedia: %v", err)
+	}
+
+	r := New(pool)
+	requestID := "integration-" + ids.New()
+	t.Cleanup(func() {
+		_, _ = pool.Exec(context.Background(), `DELETE FROM audit_logs WHERE request_id = $1`, requestID)
+	})
+
+	in := domain.AuditEntry{
+		ActorID: "u-admin", ActorRole: "admin", Action: "PATCH",
+		Path: "/api/v1/admin/orders/o-1/status", Status: 200, RequestID: requestID,
+	}
+	if err := r.InsertAudit(ctx, in); err != nil {
+		t.Fatal(err)
+	}
+	// Retry dengan request_id sama harus idempoten.
+	if err := r.InsertAudit(ctx, in); err != nil {
+		t.Fatal(err)
+	}
+
+	var count int
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM audit_logs WHERE request_id = $1`, requestID).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != 1 {
+		t.Fatalf("audit count = %d, want 1", count)
+	}
+}

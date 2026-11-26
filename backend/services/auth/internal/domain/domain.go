@@ -55,6 +55,37 @@ type RefreshToken struct {
 	IP        string
 }
 
+// AuditEntry adalah catatan mutasi admin yang disimpan persisten.
+type AuditEntry struct {
+	ActorID   string
+	ActorRole string
+	Action    string
+	Path      string
+	Status    int
+	RequestID string
+}
+
+// ValidateAudit memeriksa field wajib audit. request_id boleh kosong.
+func ValidateAudit(a AuditEntry) error {
+	e := &ValidationError{}
+	if strings.TrimSpace(a.ActorID) == "" {
+		e.Add("actor_id", "ID actor wajib diisi.")
+	}
+	if strings.TrimSpace(a.ActorRole) == "" {
+		e.Add("actor_role", "Peran actor wajib diisi.")
+	}
+	if strings.TrimSpace(a.Action) == "" {
+		e.Add("action", "Aksi wajib diisi.")
+	}
+	if strings.TrimSpace(a.Path) == "" {
+		e.Add("path", "Path wajib diisi.")
+	}
+	if a.Status < 100 || a.Status > 599 {
+		e.Add("status", "Status HTTP tidak valid.")
+	}
+	return e.OrNil()
+}
+
 // FieldError menjelaskan satu kesalahan validasi.
 type FieldError struct {
 	Field   string

@@ -20,12 +20,13 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AuthService_Register_FullMethodName  = "/saybu.auth.v1.AuthService/Register"
-	AuthService_Login_FullMethodName     = "/saybu.auth.v1.AuthService/Login"
-	AuthService_Refresh_FullMethodName   = "/saybu.auth.v1.AuthService/Refresh"
-	AuthService_Logout_FullMethodName    = "/saybu.auth.v1.AuthService/Logout"
-	AuthService_GetUser_FullMethodName   = "/saybu.auth.v1.AuthService/GetUser"
-	AuthService_ListUsers_FullMethodName = "/saybu.auth.v1.AuthService/ListUsers"
+	AuthService_Register_FullMethodName    = "/saybu.auth.v1.AuthService/Register"
+	AuthService_Login_FullMethodName       = "/saybu.auth.v1.AuthService/Login"
+	AuthService_Refresh_FullMethodName     = "/saybu.auth.v1.AuthService/Refresh"
+	AuthService_Logout_FullMethodName      = "/saybu.auth.v1.AuthService/Logout"
+	AuthService_GetUser_FullMethodName     = "/saybu.auth.v1.AuthService/GetUser"
+	AuthService_ListUsers_FullMethodName   = "/saybu.auth.v1.AuthService/ListUsers"
+	AuthService_RecordAudit_FullMethodName = "/saybu.auth.v1.AuthService/RecordAudit"
 )
 
 // AuthServiceClient is the client API for AuthService service.
@@ -40,6 +41,8 @@ type AuthServiceClient interface {
 	Logout(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*User, error)
 	ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error)
+	// RecordAudit menyimpan audit mutasi admin secara persisten (internal).
+	RecordAudit(ctx context.Context, in *RecordAuditRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type authServiceClient struct {
@@ -110,6 +113,16 @@ func (c *authServiceClient) ListUsers(ctx context.Context, in *ListUsersRequest,
 	return out, nil
 }
 
+func (c *authServiceClient) RecordAudit(ctx context.Context, in *RecordAuditRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AuthService_RecordAudit_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthServiceServer is the server API for AuthService service.
 // All implementations must embed UnimplementedAuthServiceServer
 // for forward compatibility.
@@ -122,6 +135,8 @@ type AuthServiceServer interface {
 	Logout(context.Context, *LogoutRequest) (*emptypb.Empty, error)
 	GetUser(context.Context, *GetUserRequest) (*User, error)
 	ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error)
+	// RecordAudit menyimpan audit mutasi admin secara persisten (internal).
+	RecordAudit(context.Context, *RecordAuditRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedAuthServiceServer()
 }
 
@@ -149,6 +164,9 @@ func (UnimplementedAuthServiceServer) GetUser(context.Context, *GetUserRequest) 
 }
 func (UnimplementedAuthServiceServer) ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListUsers not implemented")
+}
+func (UnimplementedAuthServiceServer) RecordAudit(context.Context, *RecordAuditRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method RecordAudit not implemented")
 }
 func (UnimplementedAuthServiceServer) mustEmbedUnimplementedAuthServiceServer() {}
 func (UnimplementedAuthServiceServer) testEmbeddedByValue()                     {}
@@ -279,6 +297,24 @@ func _AuthService_ListUsers_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthService_RecordAudit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RecordAuditRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).RecordAudit(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_RecordAudit_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).RecordAudit(ctx, req.(*RecordAuditRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AuthService_ServiceDesc is the grpc.ServiceDesc for AuthService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -309,6 +345,10 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListUsers",
 			Handler:    _AuthService_ListUsers_Handler,
+		},
+		{
+			MethodName: "RecordAudit",
+			Handler:    _AuthService_RecordAudit_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

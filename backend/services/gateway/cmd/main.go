@@ -276,7 +276,7 @@ func main() {
 						}
 						return ratelimit.ByIP(req)
 					}))
-				r.Use(auditmw.Middleware(log))
+				r.Use(auditmw.Middleware(log, authClient))
 				r.Get("/users", authHandler.ListUsers)
 
 				r.Get("/orders", adminHandler.ListOrders)

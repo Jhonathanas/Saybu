@@ -562,6 +562,90 @@ func (x *AuthResponse) GetRefreshExpiresIn() int64 {
 	return 0
 }
 
+type RecordAuditRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ActorId       string                 `protobuf:"bytes,1,opt,name=actor_id,json=actorId,proto3" json:"actor_id,omitempty"`
+	ActorRole     string                 `protobuf:"bytes,2,opt,name=actor_role,json=actorRole,proto3" json:"actor_role,omitempty"`
+	Action        string                 `protobuf:"bytes,3,opt,name=action,proto3" json:"action,omitempty"` // metode HTTP: POST/PATCH/PUT/DELETE
+	Path          string                 `protobuf:"bytes,4,opt,name=path,proto3" json:"path,omitempty"`
+	Status        int32                  `protobuf:"varint,5,opt,name=status,proto3" json:"status,omitempty"`
+	RequestId     string                 `protobuf:"bytes,6,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"` // dipakai untuk idempotensi; boleh kosong
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RecordAuditRequest) Reset() {
+	*x = RecordAuditRequest{}
+	mi := &file_saybu_auth_v1_auth_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RecordAuditRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RecordAuditRequest) ProtoMessage() {}
+
+func (x *RecordAuditRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saybu_auth_v1_auth_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RecordAuditRequest.ProtoReflect.Descriptor instead.
+func (*RecordAuditRequest) Descriptor() ([]byte, []int) {
+	return file_saybu_auth_v1_auth_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *RecordAuditRequest) GetActorId() string {
+	if x != nil {
+		return x.ActorId
+	}
+	return ""
+}
+
+func (x *RecordAuditRequest) GetActorRole() string {
+	if x != nil {
+		return x.ActorRole
+	}
+	return ""
+}
+
+func (x *RecordAuditRequest) GetAction() string {
+	if x != nil {
+		return x.Action
+	}
+	return ""
+}
+
+func (x *RecordAuditRequest) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *RecordAuditRequest) GetStatus() int32 {
+	if x != nil {
+		return x.Status
+	}
+	return 0
+}
+
+func (x *RecordAuditRequest) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
 var File_saybu_auth_v1_auth_proto protoreflect.FileDescriptor
 
 const file_saybu_auth_v1_auth_proto_rawDesc = "" +
@@ -606,14 +690,24 @@ const file_saybu_auth_v1_auth_proto_rawDesc = "" +
 	"\n" +
 	"expires_in\x18\x03 \x01(\x03R\texpiresIn\x12#\n" +
 	"\rrefresh_token\x18\x04 \x01(\tR\frefreshToken\x12,\n" +
-	"\x12refresh_expires_in\x18\x05 \x01(\x03R\x10refreshExpiresIn2\xaf\x03\n" +
+	"\x12refresh_expires_in\x18\x05 \x01(\x03R\x10refreshExpiresIn\"\xb1\x01\n" +
+	"\x12RecordAuditRequest\x12\x19\n" +
+	"\bactor_id\x18\x01 \x01(\tR\aactorId\x12\x1d\n" +
+	"\n" +
+	"actor_role\x18\x02 \x01(\tR\tactorRole\x12\x16\n" +
+	"\x06action\x18\x03 \x01(\tR\x06action\x12\x12\n" +
+	"\x04path\x18\x04 \x01(\tR\x04path\x12\x16\n" +
+	"\x06status\x18\x05 \x01(\x05R\x06status\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x06 \x01(\tR\trequestId2\xf9\x03\n" +
 	"\vAuthService\x12G\n" +
 	"\bRegister\x12\x1e.saybu.auth.v1.RegisterRequest\x1a\x1b.saybu.auth.v1.AuthResponse\x12A\n" +
 	"\x05Login\x12\x1b.saybu.auth.v1.LoginRequest\x1a\x1b.saybu.auth.v1.AuthResponse\x12E\n" +
 	"\aRefresh\x12\x1d.saybu.auth.v1.RefreshRequest\x1a\x1b.saybu.auth.v1.AuthResponse\x12>\n" +
 	"\x06Logout\x12\x1c.saybu.auth.v1.LogoutRequest\x1a\x16.google.protobuf.Empty\x12=\n" +
 	"\aGetUser\x12\x1d.saybu.auth.v1.GetUserRequest\x1a\x13.saybu.auth.v1.User\x12N\n" +
-	"\tListUsers\x12\x1f.saybu.auth.v1.ListUsersRequest\x1a .saybu.auth.v1.ListUsersResponseB Z\x1esaybu/gen/saybu/auth/v1;authv1b\x06proto3"
+	"\tListUsers\x12\x1f.saybu.auth.v1.ListUsersRequest\x1a .saybu.auth.v1.ListUsersResponse\x12H\n" +
+	"\vRecordAudit\x12!.saybu.auth.v1.RecordAuditRequest\x1a\x16.google.protobuf.EmptyB Z\x1esaybu/gen/saybu/auth/v1;authv1b\x06proto3"
 
 var (
 	file_saybu_auth_v1_auth_proto_rawDescOnce sync.Once
@@ -627,39 +721,42 @@ func file_saybu_auth_v1_auth_proto_rawDescGZIP() []byte {
 	return file_saybu_auth_v1_auth_proto_rawDescData
 }
 
-var file_saybu_auth_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_saybu_auth_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_saybu_auth_v1_auth_proto_goTypes = []any{
-	(*User)(nil),              // 0: saybu.auth.v1.User
-	(*RegisterRequest)(nil),   // 1: saybu.auth.v1.RegisterRequest
-	(*LoginRequest)(nil),      // 2: saybu.auth.v1.LoginRequest
-	(*RefreshRequest)(nil),    // 3: saybu.auth.v1.RefreshRequest
-	(*LogoutRequest)(nil),     // 4: saybu.auth.v1.LogoutRequest
-	(*GetUserRequest)(nil),    // 5: saybu.auth.v1.GetUserRequest
-	(*ListUsersRequest)(nil),  // 6: saybu.auth.v1.ListUsersRequest
-	(*ListUsersResponse)(nil), // 7: saybu.auth.v1.ListUsersResponse
-	(*AuthResponse)(nil),      // 8: saybu.auth.v1.AuthResponse
-	(*emptypb.Empty)(nil),     // 9: google.protobuf.Empty
+	(*User)(nil),               // 0: saybu.auth.v1.User
+	(*RegisterRequest)(nil),    // 1: saybu.auth.v1.RegisterRequest
+	(*LoginRequest)(nil),       // 2: saybu.auth.v1.LoginRequest
+	(*RefreshRequest)(nil),     // 3: saybu.auth.v1.RefreshRequest
+	(*LogoutRequest)(nil),      // 4: saybu.auth.v1.LogoutRequest
+	(*GetUserRequest)(nil),     // 5: saybu.auth.v1.GetUserRequest
+	(*ListUsersRequest)(nil),   // 6: saybu.auth.v1.ListUsersRequest
+	(*ListUsersResponse)(nil),  // 7: saybu.auth.v1.ListUsersResponse
+	(*AuthResponse)(nil),       // 8: saybu.auth.v1.AuthResponse
+	(*RecordAuditRequest)(nil), // 9: saybu.auth.v1.RecordAuditRequest
+	(*emptypb.Empty)(nil),      // 10: google.protobuf.Empty
 }
 var file_saybu_auth_v1_auth_proto_depIdxs = []int32{
-	0, // 0: saybu.auth.v1.ListUsersResponse.users:type_name -> saybu.auth.v1.User
-	0, // 1: saybu.auth.v1.AuthResponse.user:type_name -> saybu.auth.v1.User
-	1, // 2: saybu.auth.v1.AuthService.Register:input_type -> saybu.auth.v1.RegisterRequest
-	2, // 3: saybu.auth.v1.AuthService.Login:input_type -> saybu.auth.v1.LoginRequest
-	3, // 4: saybu.auth.v1.AuthService.Refresh:input_type -> saybu.auth.v1.RefreshRequest
-	4, // 5: saybu.auth.v1.AuthService.Logout:input_type -> saybu.auth.v1.LogoutRequest
-	5, // 6: saybu.auth.v1.AuthService.GetUser:input_type -> saybu.auth.v1.GetUserRequest
-	6, // 7: saybu.auth.v1.AuthService.ListUsers:input_type -> saybu.auth.v1.ListUsersRequest
-	8, // 8: saybu.auth.v1.AuthService.Register:output_type -> saybu.auth.v1.AuthResponse
-	8, // 9: saybu.auth.v1.AuthService.Login:output_type -> saybu.auth.v1.AuthResponse
-	8, // 10: saybu.auth.v1.AuthService.Refresh:output_type -> saybu.auth.v1.AuthResponse
-	9, // 11: saybu.auth.v1.AuthService.Logout:output_type -> google.protobuf.Empty
-	0, // 12: saybu.auth.v1.AuthService.GetUser:output_type -> saybu.auth.v1.User
-	7, // 13: saybu.auth.v1.AuthService.ListUsers:output_type -> saybu.auth.v1.ListUsersResponse
-	8, // [8:14] is the sub-list for method output_type
-	2, // [2:8] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	0,  // 0: saybu.auth.v1.ListUsersResponse.users:type_name -> saybu.auth.v1.User
+	0,  // 1: saybu.auth.v1.AuthResponse.user:type_name -> saybu.auth.v1.User
+	1,  // 2: saybu.auth.v1.AuthService.Register:input_type -> saybu.auth.v1.RegisterRequest
+	2,  // 3: saybu.auth.v1.AuthService.Login:input_type -> saybu.auth.v1.LoginRequest
+	3,  // 4: saybu.auth.v1.AuthService.Refresh:input_type -> saybu.auth.v1.RefreshRequest
+	4,  // 5: saybu.auth.v1.AuthService.Logout:input_type -> saybu.auth.v1.LogoutRequest
+	5,  // 6: saybu.auth.v1.AuthService.GetUser:input_type -> saybu.auth.v1.GetUserRequest
+	6,  // 7: saybu.auth.v1.AuthService.ListUsers:input_type -> saybu.auth.v1.ListUsersRequest
+	9,  // 8: saybu.auth.v1.AuthService.RecordAudit:input_type -> saybu.auth.v1.RecordAuditRequest
+	8,  // 9: saybu.auth.v1.AuthService.Register:output_type -> saybu.auth.v1.AuthResponse
+	8,  // 10: saybu.auth.v1.AuthService.Login:output_type -> saybu.auth.v1.AuthResponse
+	8,  // 11: saybu.auth.v1.AuthService.Refresh:output_type -> saybu.auth.v1.AuthResponse
+	10, // 12: saybu.auth.v1.AuthService.Logout:output_type -> google.protobuf.Empty
+	0,  // 13: saybu.auth.v1.AuthService.GetUser:output_type -> saybu.auth.v1.User
+	7,  // 14: saybu.auth.v1.AuthService.ListUsers:output_type -> saybu.auth.v1.ListUsersResponse
+	10, // 15: saybu.auth.v1.AuthService.RecordAudit:output_type -> google.protobuf.Empty
+	9,  // [9:16] is the sub-list for method output_type
+	2,  // [2:9] is the sub-list for method input_type
+	2,  // [2:2] is the sub-list for extension type_name
+	2,  // [2:2] is the sub-list for extension extendee
+	0,  // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_saybu_auth_v1_auth_proto_init() }
@@ -673,7 +770,7 @@ func file_saybu_auth_v1_auth_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_saybu_auth_v1_auth_proto_rawDesc), len(file_saybu_auth_v1_auth_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

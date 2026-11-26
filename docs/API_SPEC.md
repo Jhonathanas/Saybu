@@ -490,9 +490,20 @@ service AuthService {
   rpc Logout(LogoutRequest) returns (google.protobuf.Empty);
   rpc GetUser(GetUserRequest) returns (User);
   rpc ListUsers(ListUsersRequest) returns (ListUsersResponse); // admin
+  rpc RecordAudit(RecordAuditRequest) returns (google.protobuf.Empty); // internal, dari gateway
 }
 message User { string id=1; string name=2; string phone=3; string email=4; string role=5; }
+message RecordAuditRequest {
+  string actor_id=1; string actor_role=2; string action=3;
+  string path=4; int32 status=5; string request_id=6;
+}
 ```
+
+`RecordAudit` hanya dipakai gateway (bukan endpoint REST). Field wajib: `actor_id`,
+`actor_role`, `action`, `path`, dan `status` (100–599); `request_id` boleh kosong dan
+dipakai sebagai kunci idempotensi saat retry. Audit ditulis ke tabel `audit_logs`
+di database `saybu_auth`. Gateway memanggil dengan timeout 3 detik dan tetap
+mengembalikan respons jika penyimpanan gagal (kesalahan hanya dicatat di log).
 
 ### 8.2 `catalog.v1.CatalogService`
 
