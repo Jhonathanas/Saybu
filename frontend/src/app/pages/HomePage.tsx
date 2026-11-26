@@ -61,7 +61,7 @@ export function HomePage() {
         <span className="inline-flex rounded-full bg-background px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-foreground">
           Panen pagi ini
         </span>
-        <h1 className="mt-3 max-w-md text-2xl font-extrabold leading-tight sm:text-4xl">
+        <h1 className="mt-3 max-w-md text-2xl font-semibold leading-tight tracking-[-0.04em] sm:text-4xl">
           Buah &amp; sayur segar, langsung ke dapurmu
         </h1>
         <p className="mt-2 max-w-md text-sm text-background/80">
@@ -86,7 +86,7 @@ export function HomePage() {
       </section>
 
       <section aria-labelledby="belanja-cepat">
-        <h2 id="belanja-cepat" className="mb-2 text-base font-bold text-foreground">
+        <h2 id="belanja-cepat" className="mb-2 text-base font-semibold tracking-tight text-foreground">
           Belanja cepat
         </h2>
         <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
@@ -103,7 +103,7 @@ export function HomePage() {
 
       <section aria-labelledby="produk-terbaru" className="flex flex-col gap-3">
         <div className="flex items-baseline justify-between">
-          <h2 id="produk-terbaru" className="text-lg font-bold text-foreground">
+          <h2 id="produk-terbaru" className="text-lg font-semibold tracking-tight text-foreground">
             Produk terbaru
           </h2>
           <Link to="/produk" className="text-sm font-semibold text-foreground hover:underline">

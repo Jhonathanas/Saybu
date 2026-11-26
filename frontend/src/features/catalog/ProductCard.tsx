@@ -19,7 +19,7 @@ export function ProductCard({ product }: { product: Product }) {
   const quickQty = product.min_qty > 0 ? product.min_qty : product.step_qty || 1
 
   return (
-    <article className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+    <article className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-[0_1px_1px_#00000005,0_2px_2px_#0000000a] transition hover:-translate-y-0.5 hover:shadow-[0_2px_2px_#0000000a,0_8px_8px_-8px_#0000000a]">
       <Link to={`/produk/${product.slug}`} className="relative block">
         <ProductImage
           src={product.images[0]}
