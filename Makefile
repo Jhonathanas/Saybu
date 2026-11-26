@@ -84,6 +84,11 @@ lint: ## Vet + golangci-lint bila tersedia
 lint-frontend: ## Lint + typecheck frontend
 	cd frontend && npm run lint && npm run typecheck
 
+audit: ## Scan kerentanan Go + npm
+	@command -v govulncheck >/dev/null 2>&1 || { echo "govulncheck belum terpasang: go install golang.org/x/vuln/cmd/govulncheck@latest"; exit 1; }
+	cd backend && govulncheck ./...
+	cd frontend && npm audit --audit-level=high
+
 fmt: ## Format kode Go
 	cd backend && gofmt -w .
 

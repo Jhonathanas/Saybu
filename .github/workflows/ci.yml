@@ -61,6 +61,89 @@ jobs:
       - name: Generated code up to date
         run: git diff --exit-code
 
+  security:
+    name: Dependency & vulnerability scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - name: Install govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@v1.10.0
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: govulncheck
+        working-directory: backend
+        run: govulncheck ./...
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: npm ci
+        working-directory: frontend
+        run: npm ci
+
+      - name: npm audit
+        working-directory: frontend
+        run: npm audit --audit-level=high
+
+  integration:
+    name: Integration (Postgres + Kafka)
+    runs-on: ubuntu-latest
+    env:
+      AUTH_DB_DSN: postgres://saybu:saybu@localhost:5433/saybu_auth?sslmode=disable
+      CATALOG_DB_DSN: postgres://saybu:saybu@localhost:5433/saybu_catalog?sslmode=disable
+      SHIPPING_DB_DSN: postgres://saybu:saybu@localhost:5433/saybu_shipping?sslmode=disable
+      ORDER_DB_DSN: postgres://saybu:saybu@localhost:5433/saybu_orders?sslmode=disable
+      PAYMENT_DB_DSN: postgres://saybu:saybu@localhost:5433/saybu_payments?sslmode=disable
+      KAFKA_BROKERS: localhost:29092
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - name: Install goose
+        run: |
+          go install github.com/pressly/goose/v3/cmd/goose@v3.30.0
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Start Postgres and Kafka
+        run: docker compose up -d postgres kafka kafka-init
+
+      - name: Wait for infra
+        run: |
+          for i in $(seq 1 60); do
+            if docker compose exec -T postgres pg_isready -U saybu >/dev/null 2>&1; then
+              break
+            fi
+            sleep 2
+          done
+          docker compose exec -T postgres pg_isready -U saybu
+          # kafka-init adalah container one-shot; tunggu sampai selesai membuat topik.
+          docker wait "$(docker compose ps -q kafka-init)"
+
+      - name: Migrate databases
+        run: bash infra/scripts/migrate.sh up
+
+      - name: Integration tests
+        working-directory: backend
+        run: go test -tags=integration -count=1 ./...
+
+      - name: Infra logs on failure
+        if: failure()
+        run: docker compose logs --tail=200 postgres kafka kafka-init
+
   compose:
     name: Docker Compose config
     runs-on: ubuntu-latest
