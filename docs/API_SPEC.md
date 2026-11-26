@@ -636,7 +636,8 @@ Envelope (semua event):
 > **M4** memancarkan ketiga event dari service payment (lewat outbox). Konsumer: service order
 > (`payment.proof_uploaded`/`confirmed`/`rejected` → transisi status pesanan + `order.status_changed`),
 > service catalog (`payment.confirmed` → reservasi stok `CONFIRMED`), dan notification
-> (semua event → Telegram). Semua konsumer idempoten via `processed_events`.
+> (semua event → Telegram). Semua konsumer idempoten via `processed_events`; notification menyimpan
+> klaim di `saybu_notifications` (`pending` → `sent`, atau dihapus bila pengiriman gagal).
 
 ### 9.3 `catalog.events.v1`
 

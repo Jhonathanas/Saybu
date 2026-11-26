@@ -199,6 +199,19 @@ service untuk akar masalah.
 
 **Verifikasi:** pesan yang diperbaiki berhasil diproses; DLQ tidak bertambah lagi.
 
+**Catatan notifikasi:** bila konsumer notification crash setelah mengklaim event tetapi sebelum
+mengirim Telegram, baris tetap berstatus `pending` dan duplikat berikutnya dilewati. Bersihkan
+klaim yang nyangkut agar event diproses ulang:
+
+```sql
+-- periksa
+SELECT event_id, event_type, created_at FROM saybu_notifications.processed_events
+WHERE status = 'pending' AND created_at < now() - interval '10 minutes';
+-- hapus hanya event yang memang ingin diulang
+DELETE FROM saybu_notifications.processed_events
+WHERE event_id = '<event_id>' AND status = 'pending';
+```
+
 ---
 
 ## 9. Insiden: data rusak / perlu restore

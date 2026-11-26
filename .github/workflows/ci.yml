@@ -104,6 +104,7 @@ jobs:
       SHIPPING_DB_DSN: postgres://saybu:saybu@localhost:5433/saybu_shipping?sslmode=disable
       ORDER_DB_DSN: postgres://saybu:saybu@localhost:5433/saybu_orders?sslmode=disable
       PAYMENT_DB_DSN: postgres://saybu:saybu@localhost:5433/saybu_payments?sslmode=disable
+      NOTIFICATION_DB_DSN: postgres://saybu:saybu@localhost:5433/saybu_notifications?sslmode=disable
       KAFKA_BROKERS: localhost:29092
     steps:
       - uses: actions/checkout@v4

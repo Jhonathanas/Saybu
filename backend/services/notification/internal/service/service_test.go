@@ -13,7 +13,7 @@ import (
 )
 
 func newNotifier() *Notifier {
-	return New(telegram.NewClient("", ""), slog.New(slog.NewTextHandler(io.Discard, nil)))
+	return New(telegram.NewClient("", ""), slog.New(slog.NewTextHandler(io.Discard, nil)), NewMemoryDedup())
 }
 
 func event(eventType string, payload map[string]any) kafkax.Event {
@@ -101,16 +101,70 @@ func TestBuildMessageBadPayload(t *testing.T) {
 	}
 }
 
-func TestMarkSeenDedup(t *testing.T) {
-	n := newNotifier()
-	if n.markSeen("ev-1") {
-		t.Fatal("pertama kali bukan duplikat")
+func TestMemoryDedupClaim(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemoryDedup()
+
+	first, err := store.Claim(ctx, "ev-1", "order.created")
+	if err != nil || !first {
+		t.Fatalf("claim pertama = %v, %v", first, err)
 	}
-	if !n.markSeen("ev-1") {
-		t.Fatal("kedua kali harus duplikat")
+	second, err := store.Claim(ctx, "ev-1", "order.created")
+	if err != nil || second {
+		t.Fatalf("claim kedua = %v, %v (harus duplikat)", second, err)
 	}
-	if n.markSeen("") {
-		t.Fatal("event id kosong tidak boleh dianggap duplikat")
+	if err := store.Release(ctx, "ev-1"); err != nil {
+		t.Fatal(err)
+	}
+	retry, err := store.Claim(ctx, "ev-1", "order.created")
+	if err != nil || !retry {
+		t.Fatalf("claim setelah release = %v, %v", retry, err)
+	}
+	if err := store.MarkSent(ctx, "ev-1"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+type countingDedup struct {
+	claims   int
+	marks    int
+	releases int
+	claim    bool
+}
+
+func (c *countingDedup) Claim(context.Context, string, string) (bool, error) {
+	c.claims++
+	return c.claim, nil
+}
+func (c *countingDedup) MarkSent(context.Context, string) error {
+	c.marks++
+	return nil
+}
+func (c *countingDedup) Release(context.Context, string) error {
+	c.releases++
+	return nil
+}
+
+func TestHandleEventUsesDedupStore(t *testing.T) {
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	ev := event("payment.confirmed", map[string]any{"code": "SB-1", "amount": 1000})
+
+	store := &countingDedup{claim: true}
+	n := New(telegram.NewClient("", ""), log, store)
+	if err := n.HandleEvent(context.Background(), ev); err != nil {
+		t.Fatal(err)
+	}
+	if store.claims != 1 || store.marks != 1 || store.releases != 0 {
+		t.Fatalf("store = %+v", store)
+	}
+
+	duplicate := &countingDedup{claim: false}
+	n = New(telegram.NewClient("", ""), log, duplicate)
+	if err := n.HandleEvent(context.Background(), ev); err != nil {
+		t.Fatal(err)
+	}
+	if duplicate.claims != 1 || duplicate.marks != 0 {
+		t.Fatalf("duplikat tidak boleh diproses ulang: %+v", duplicate)
 	}
 }
 

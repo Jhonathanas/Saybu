@@ -9,81 +9,71 @@ import (
 	"log/slog"
 	"strconv"
 	"strings"
-	"sync"
 
 	"saybu/pkg/kafkax"
 	"saybu/services/notification/internal/telegram"
 )
 
-// maxSeen membatasi jumlah event id yang diingat untuk deduplikasi.
-const maxSeen = 2000
-
-// Notifier mengubah event menjadi pesan Telegram.
-//
-// Tanpa database, deduplikasi dilakukan in-memory (bounded) sebagai lapis
-// kedua setelah commit Kafka; duplikasi setelah crash tetap mungkin tetapi
-// jarang dan tidak berbahaya.
+// Notifier mengubah event menjadi pesan Telegram. Dedup-nya persisten via
+// DedupStore (Postgres di produksi, in-memory hanya untuk pengembangan).
 type Notifier struct {
 	client *telegram.Client
 	log    *slog.Logger
-
-	mu   sync.Mutex
-	seen map[string]struct{}
-	ring []string
+	dedup  DedupStore
 }
 
-// New membuat Notifier.
-func New(client *telegram.Client, log *slog.Logger) *Notifier {
+// New membuat Notifier. Store nil diganti dedup in-memory.
+func New(client *telegram.Client, log *slog.Logger, store DedupStore) *Notifier {
 	if log == nil {
 		log = slog.Default()
+	}
+	if store == nil {
+		store = NewMemoryDedup()
 	}
 	return &Notifier{
 		client: client,
 		log:    log,
-		seen:   make(map[string]struct{}),
+		dedup:  store,
 	}
 }
 
 // HandleEvent memproses satu event. Tipe yang tidak dikenal diabaikan.
 func (n *Notifier) HandleEvent(ctx context.Context, ev kafkax.Event) error {
-	if n.markSeen(ev.EventID) {
+	claimed, err := n.dedup.Claim(ctx, ev.EventID, ev.Type)
+	if err != nil {
+		return fmt.Errorf("service: klaim event %s: %w", ev.EventID, err)
+	}
+	if !claimed {
 		n.log.Debug("event sudah dinotifikasi (duplikat)", "event_id", ev.EventID, "type", ev.Type)
 		return nil
 	}
 
 	text, ok := n.buildMessage(ev)
 	if !ok {
+		n.markSent(ctx, ev.EventID)
 		return nil
 	}
 	if !n.client.Enabled() {
 		n.log.Debug("telegram nonaktif, notifikasi dilewati", "type", ev.Type, "event_id", ev.EventID)
+		n.markSent(ctx, ev.EventID)
 		return nil
 	}
 	if err := n.client.SendMessage(ctx, text); err != nil {
+		if releaseErr := n.dedup.Release(ctx, ev.EventID); releaseErr != nil {
+			n.log.Error("lepas klaim gagal", "error", releaseErr, "event_id", ev.EventID)
+		}
 		return fmt.Errorf("service: kirim notifikasi %s: %w", ev.Type, err)
 	}
+	n.markSent(ctx, ev.EventID)
 	n.log.Info("notifikasi terkirim", "type", ev.Type, "event_id", ev.EventID)
 	return nil
 }
 
-// markSeen mengembalikan true bila event id sudah pernah diproses.
-func (n *Notifier) markSeen(id string) bool {
-	if id == "" {
-		return false
+// markSent tidak menggagalkan pengiriman yang sudah berhasil.
+func (n *Notifier) markSent(ctx context.Context, eventID string) {
+	if err := n.dedup.MarkSent(ctx, eventID); err != nil {
+		n.log.Error("tandai event sent gagal", "error", err, "event_id", eventID)
 	}
-	n.mu.Lock()
-	defer n.mu.Unlock()
-	if _, ok := n.seen[id]; ok {
-		return true
-	}
-	n.seen[id] = struct{}{}
-	n.ring = append(n.ring, id)
-	if len(n.ring) > maxSeen {
-		old := n.ring[0]
-		n.ring = n.ring[1:]
-		delete(n.seen, old)
-	}
-	return false
 }
 
 func (n *Notifier) buildMessage(ev kafkax.Event) (string, bool) {

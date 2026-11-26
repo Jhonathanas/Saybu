@@ -253,8 +253,9 @@
   `payment.proof_uploaded` → `PENDING_PAYMENT → WAITING_VERIFICATION`; `payment.confirmed` → `WAITING_VERIFICATION → PAID`;
   `payment.rejected` → `WAITING_VERIFICATION → PENDING_PAYMENT`.
 - **Katalog** mengonsumsi `payment.confirmed` untuk menandai reservasi stok `CONFIRMED`.
-- **Notification** memakai consumer group `notification-svc` pada `order.events.v1` + `payment.events.v1`; tanpa DB
-  (dedup in-memory berbatas). Bila `TELEGRAM_BOT_TOKEN`/`TELEGRAM_ADMIN_CHAT_ID` kosong, pengiriman dilewati & dicatat di log.
+- **Notification** memakai consumer group `notification-svc` pada `order.events.v1` + `payment.events.v1`;
+  dedup persisten di `saybu_notifications.processed_events` (fallback in-memory bila DSN kosong).
+  Bila `TELEGRAM_BOT_TOKEN`/`TELEGRAM_ADMIN_CHAT_ID` kosong, pengiriman dilewati & dicatat di log.
 - **Frontend:** modul `features/payment` (`types`, `api`, `ProofUploadForm`, `PaymentPanel`) + halaman admin
   `/admin/pembayaran`. Instruksi transfer & unggah bukti dilepas dari `OrderDetailView` ke `PaymentPanel`
   (rekening dari API, fallback `VITE_BANK_*`). `CopyButton` dipindah ke `components/ui`.

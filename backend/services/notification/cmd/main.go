@@ -10,6 +10,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"saybu/pkg/config"
 	"saybu/pkg/httpx"
 	"saybu/pkg/kafkax"
@@ -34,10 +36,28 @@ func main() {
 		log.Warn("telegram nonaktif: TELEGRAM_BOT_TOKEN/TELEGRAM_ADMIN_CHAT_ID kosong; notifikasi dilewati")
 	}
 
-	notifier := service.New(telegramClient, log)
-
 	metrics := telemetry.NewMetrics("notification")
 	checks := []httpx.NamedCheck{}
+
+	var dedup service.DedupStore = service.NewMemoryDedup()
+	if dsn := config.Get("NOTIFICATION_DB_DSN", ""); dsn != "" {
+		pool, err := pgxpool.New(ctx, dsn)
+		if err != nil {
+			log.Error("koneksi notification DB gagal", "error", err)
+			os.Exit(1)
+		}
+		defer pool.Close()
+		if err := pool.Ping(ctx); err != nil {
+			log.Error("notification DB tidak tersedia", "error", err)
+			os.Exit(1)
+		}
+		dedup = service.NewPostgresDedup(pool)
+		checks = append(checks, httpx.NamedCheck{Name: "postgres", Check: pool.Ping})
+	} else {
+		log.Warn("NOTIFICATION_DB_DSN kosong; dedup in-memory dipakai (hilang saat restart)")
+	}
+
+	notifier := service.New(telegramClient, log, dedup)
 
 	// Konsumer event pesanan + pembayaran + katalog -> notifikasi Telegram.
 	if brokers := config.List("KAFKA_BROKERS", nil); len(brokers) > 0 {

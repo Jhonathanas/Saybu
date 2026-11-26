@@ -114,6 +114,10 @@
 - Producer memakai idempotent producer (`enable.idempotence=true`, `acks=all`).
 - Consumer commit setelah sukses; kegagalan → retry in-process (3x, backoff eksponensial 1s/2s/4s) → topik `.dlq`.
 - Consumer wajib idempotent: tabel `processed_events(event_id PRIMARY KEY)` di DB service masing-masing.
+  Notification memakai database `saybu_notifications` dengan pola klaim: `pending` → kirim Telegram →
+  `sent` (atau `release` saat gagal agar retry bisa mengirim ulang). Karena efek Telegram eksternal,
+  klaim dan pengiriman tidak bisa satu transaksi DB; baris `pending` yang nyangkut dibersihkan manual
+  lewat runbook.
 - Consumer group: satu per service (`catalog-svc`, `order-svc`, `payment-svc`, `notification-svc`).
 
 ---

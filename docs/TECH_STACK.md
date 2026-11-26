@@ -153,7 +153,7 @@ frontend/
 
 | Container | Image | Port | Fungsi |
 |---|---|---|---|
-| `postgres` | `postgres:17-alpine` | 5433 (host) | 5 database service |
+| `postgres` | `postgres:17-alpine` | 5433 (host) | 6 database (5 service + notification) |
 | `kafka` | `apache/kafka:3.9.0` (KRaft) | 29092 (host) | broker |
 | `kafka-ui` | `provectuslabs/kafka-ui:v0.7.2` | 8090 (host) | inspeksi topik |
 | `mailpit` (opsional) | `axllent/mailpit` | 8025 | uji email |
@@ -199,6 +199,12 @@ PAYMENT_GRPC_ADDR=:50055
 PAYMENT_DB_DSN=postgres://saybu:saybu@localhost:5433/saybu_payments?sslmode=disable
 UPLOAD_DIR=./data/uploads
 UPLOAD_MAX_BYTES=5242880
+
+# notification
+NOTIFICATION_HTTP_ADDR=:8086
+NOTIFICATION_DB_DSN=postgres://saybu:saybu@localhost:5433/saybu_notifications?sslmode=disable
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_ADMIN_CHAT_ID=
 
 # kafka
 KAFKA_BROKERS=localhost:29092

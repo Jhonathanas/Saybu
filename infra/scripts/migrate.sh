@@ -17,11 +17,12 @@ declare -A dsn=(
   [shipping]="${SHIPPING_DB_DSN:-}"
   [order]="${ORDER_DB_DSN:-}"
   [payment]="${PAYMENT_DB_DSN:-}"
+  [notification]="${NOTIFICATION_DB_DSN:-}"
 )
 
 direction="${1:-up}"
 
-for svc in auth catalog shipping order payment; do
+for svc in auth catalog shipping order payment notification; do
   dir="$ROOT/backend/services/$svc/migrations"
   [[ -d "$dir" ]] || continue
   if [[ -z "${dsn[$svc]}" ]]; then
