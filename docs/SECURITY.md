@@ -69,14 +69,15 @@ Legenda status: **Aman** · **Sebagian** · **Tunda (M7)**.
 | `Referrer-Policy` | `strict-origin-when-cross-origin` | Aman |
 | `Permissions-Policy` | `geolocation=(), microphone=(), camera=()` | Aman |
 | `Strict-Transport-Security` | `max-age=31536000; includeSubDomains` | Aktif hanya `APP_ENV=production` |
-| `Content-Security-Policy` | — | Tunda (M7, butuh nonce/asset hash) |
+| `Content-Security-Policy` | `default-src 'self'; script-src 'self'; …` | Aktif di Caddy produksi (M7) |
 
 - Implementasi: `httpx.SecurityHeaders(hsts)` dipasang di rantai middleware gateway.
 - CORS: hanya origin pada `GATEWAY_CORS_ORIGINS` (default `http://localhost:5173`).
   `Access-Control-Allow-Headers` memuat `Authorization, Content-Type,
   Idempotency-Key, X-Request-Id, Accept-Language`.
-- **Batasan:** CSP belum dipasang; SPA di-serve Caddy pada M7 sehingga CSP
-  sebaiknya diatur di Caddy.
+- **CSP produksi:** dipasang di `infra/Caddyfile` (bukan gateway) karena SPA dilayani
+  langsung oleh Caddy. Nilai `style-src 'self' 'unsafe-inline'` diperlukan untuk style
+  dinamis React/Tailwind; `script-src 'self'` cukup karena build Vite tidak memakai inline script.
 
 ---
 
@@ -136,16 +137,17 @@ Legenda status: **Aman** · **Sebagian** · **Tunda (M7)**.
 |---|---|---|
 | Dependensi minimal & terpelihara | Aman | Lihat `TECH_STACK.md` §2.1 |
 | `go vet` bersih | Aman | Bagian dari `make lint` |
-| Pemindaian kerentanan otomatis | Tunda (M7) | Tambah `govulncheck`/Dependabot di CI |
+| Pemindaian kerentanan otomatis | Aman | `govulncheck` + `npm audit --audit-level=high` di CI; Dependabot mingguan |
 
 ---
 
 ## 10. Ringkasan tindak lanjut (M7)
 
-1. Pasang CSP (via Caddy) dan HSTS sudah otomatis di produksi.
+1. ~~Pasang CSP (via Caddy) dan HSTS~~ — selesai di `infra/Caddyfile` (produksi).
 2. Ganti limiter in-memory dengan Redis bila gateway di-scale.
-3. Pisahkan user DB per service (least privilege) & tutup port Postgres dari publik.
-4. Tambah `govulncheck` + Dependabot di CI.
+3. ~~Tutup port Postgres dari publik~~ — `docker-compose.prod.yml` tidak mem-publish 5432.
+   Pisahkan user DB per service (least privilege) masih opsional.
+4. ~~Tambah `govulncheck` + Dependabot di CI~~ — selesai.
 5. Rotasi seluruh secret produksi; jangan pakai nilai contoh.
 6. Opsional: pemindaian malware pada unggahan.
 

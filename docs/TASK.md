@@ -21,11 +21,15 @@
 | M4 | Pembayaran & notifikasi | 14 | 14 | ✅ |
 | M5 | Kelengkapan | 12 | 11 | 🟡 |
 | M6 | Observability & hardening | 9 | 9 | ✅ |
-| M7 | Deploy | 10 | 0 | ⬜ |
+| M7 | Deploy | 10 | 2 | 🟡 |
 
 > **M5 = 11/12:** seluruh fitur selesai, tetapi `M5-12` (uji usability panel dengan orangtua)
 > belum dijalankan karena butuh partisipan nyata. Gate M5 baru dianggap penuh setelah ada
 > catatan hasil uji dan perbaikan kecilnya.
+
+> **M7 = 2/10 selesai:** Dockerfile & image migrasi tuntas. `M7-02/05/07/08` sudah punya
+> artefak di repo tetapi baru bisa diverifikasi setelah VPS, domain, dan kredensial tersedia.
+> `M7-01/03/09/10` menunggu keputusan/akses eksternal.
 
 ---
 
@@ -385,15 +389,28 @@ Semua item di bawah sudah tuntas. M7 baru dimulai setelah verifikasi penuh (cata
 | ID | Task | Acceptance | Est |
 |---|---|---|---|
 | M7-01 | `[ ]` Provision VPS ≥ 4 GB + Docker + firewall (22/80/443) | `docker run hello-world` | 1 j |
-| M7-02 | `[ ]` `docker-compose.prod.yml` + Caddy (TLS, SPA fallback, uploads) | HTTPS aktif | 1.5 j |
+| M7-02 | `[~]` `docker-compose.prod.yml` + Caddy (TLS, SPA fallback, uploads) | HTTPS aktif — file siap, menunggu domain & VPS | 1.5 j |
 | M7-03 | `[ ]` Domain + DNS + email admin | Domain resolve | 0.5 j |
-| M7-04 | `[ ]` Dockerfile semua service (multi-stage, non-root, healthcheck) | Image < 50 MB per service | 1.5 j |
-| M7-05 | `[ ]` GitHub Actions CD ke GHCR + deploy SSH | Push ke main → live | 1 j |
-| M7-06 | `[ ]` Job migrasi sebelum deploy service | Migrasi otomatis & aman | 0.5 j |
-| M7-07 | `[ ]` Backup harian Postgres + upload object storage + retensi 7 hari | Backup berjalan otomatis | 1 j |
-| M7-08 | `[ ]` Monitoring uptime + alert Telegram bila service down | Alert diterima | 0.5 j |
+| M7-04 | `[x]` Dockerfile semua service (multi-stage, non-root, healthcheck) | 7 Dockerfile + build statik; image terbesar terukur 47,7 MB | 1.5 j |
+| M7-05 | `[~]` GitHub Actions CD ke GHCR + deploy SSH | Workflow siap; menunggu secret VPS & GHCR | 1 j |
+| M7-06 | `[x]` Job migrasi sebelum deploy service | `backend/Dockerfile.migrate` + `migrate-prod.sh` (up/down) | 0.5 j |
+| M7-07 | `[~]` Backup harian Postgres + upload object storage + retensi 7 hari | Skrip & cron siap; menunggu rclone remote di VPS | 1 j |
+| M7-08 | `[~]` Monitoring uptime + alert Telegram bila service down | Rule `up == 0` sudah ada; scrape produksi siap, perlu verifikasi setelah deploy | 0.5 j |
 | M7-09 | `[ ]` Seed data produk asli + foto + zona ongkir | Katalog siap jual | 1 j |
 | M7-10 | `[ ]` Go-live checklist: uji pesanan nyata, verifikasi transfer, notifikasi | Semua lulus | 1 j |
+
+**Catatan M7 (2026-11-26):**
+- `M7-04`: tujuh Dockerfile multi-stage (`CGO_ENABLED=0`, user non-root, healthcheck via
+  `wget` ke admin HTTP). Binary statik semua service 13–22 MB; image produksi terbesar
+  (order) terukur 47,7 MB.
+- `M7-06`: image `saybu-migrate` membawa goose + semua migrasi; dijalankan lewat
+  `docker compose -f docker-compose.prod.yml --profile migrate run --rm migrate` sebelum
+  `up -d`. Skrip mendukung `up` dan `down` serta melewati DSN kosong.
+- `M7-02`/`M7-05`/`M7-07`/`M7-08`: artefak sudah ada di repo (`docker-compose.prod.yml`,
+  `infra/Caddyfile`, `prometheus.prod.yml`, `.github/workflows/cd.yml`, `backup.sh`,
+  `infra/cron/`). Centang penuh menunggu VPS, domain, secret SSH/GHCR, dan `BACKUP_REMOTE`.
+- `M7-01`/`M7-03`/`M7-09`/`M7-10`: tidak bisa diselesaikan dari repo — butuh akses VPS,
+  domain, foto/data produk asli, dan pesanan nyata.
 
 ---
 
@@ -486,4 +503,5 @@ yang belum ada, tidak menimpa unggahan admin.
 | 2026-11-18 | UI-01..UI-06 selesai. Beranda & katalog diselaraskan dengan reference design (`refernce-design/`): bottom nav mobile + header ringkas, hero bergambar, grid kategori, kartu produk dengan aksen oranye, filter katalog sticky. Aset WebP lokal dari Unsplash (target <100 KB/file, sumber di `frontend/public/images/SOURCES.md`). Playwright dipasang untuk screenshot; hasil ada di `ui-app/` (6 PNG: beranda/produk × mobile viewport, mobile penuh, desktop). Screenshot memakai fixture API sehingga tidak perlu backend |
 | 2026-11-22 | UI-07 selesai: rework frontend ke shadcn/ui v4 + Tailwind, tema netral sesuai `DESIGN.md` (Vercel). Adapter lama tetap kompatibel; 98 test hijau. Tipografi headline & stacked shadow kartu produk disesuaikan (commit `816e4a7`) |
 | 2026-11-26 | **Utang teknis pra-deploy tuntas (TD-01..TD-07).** Audit log persisten via RPC `auth.v1.RecordAudit` + migrasi `audit_logs`; dedup notifikasi persisten di `saybu_notifications.processed_events` dengan pola `pending → sent / release`; alerting Grafana 4 rule → Telegram; E2E Playwright 8 test (checkout sukses, validasi, PICKUP/COD, lacak pesanan × mobile/desktop) dengan fixture API; CI `security` + `integration` + `e2e` + Dependabot; Go `1.26.11`; `npm audit`/`govulncheck` 0 temuan; RUNBOOK diselaraskan dengan 3 partisi Kafka. `make fmt && make lint && make test && make test-integration` hijau |
-| 2026-11-26 | **Gate sebelum M7:** seluruh utang teknis selesai; M6 = 9/9, M5 = 11/12 (M5-12 butuh partisipan nyata), M7 = 0/10 belum dimulai. Aplikasi masih bisa diuji manual di `http://localhost:5173` |
+| 2026-11-26 | **Gate sebelum M7:** seluruh utang teknis selesai; M6 = 9/9, M5 = 11/12 (M5-12 butuh partisipan nyata). Aplikasi masih bisa diuji manual di `http://localhost:5173` |
+| 2026-11-26 | **M7 dimulai dari sisi repo (2/10 tuntas).** Dockerfile multi-stage untuk 7 service + image `saybu-migrate`; `docker-compose.prod.yml` (Postgres/Kafka tanpa port host, Caddy TLS/SPA/uploads, profil `migrate`/`observability`), `infra/Caddyfile` dengan CSP & header keamanan, `prometheus.prod.yml`, workflow `cd.yml` (GHCR + SSH + kirim `frontend/dist`), backup 6 DB dengan gzip/retensi 7 hari/`BACKUP_REMOTE` rclone + cron. Verifikasi: `docker compose -f docker-compose.prod.yml config -q` lulus, Caddy `validate` lulus, binary statik 13–22 MB, image produksi auth 41 MB & order 47,7 MB, image migrasi smoke-test, backup/restore/migrasi diuji dengan stub, `bash -n` semua skrip. Deploy nyata masih menunggu VPS/domain/secret |

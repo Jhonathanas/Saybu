@@ -362,14 +362,22 @@ Panduan penanganan insiden: `docs/RUNBOOK.md`.
 - Service Go dijalankan langsung (`go run`) atau via `air` untuk hot reload.
 - Frontend `npm run dev` (Vite), proxy `/api` → `:8081`.
 
-### Produksi (M7)
+### Produksi (M7 — artefak siap, deploy nyata menunggu VPS/domain)
 
-- Satu VPS ≥ 4 GB RAM, 2 vCPU, Ubuntu LTS.
-- Docker Compose: Caddy, frontend static, 7 service, Postgres, Kafka, Prometheus (opsional).
-- Caddy: TLS otomatis (Let's Encrypt), reverse proxy `/api/*` → gateway, sisanya SPA fallback.
-- GitHub Actions: build & push image ke GHCR → SSH ke VPS → `docker compose pull && up -d`.
-- Backup: `pg_dump` harian per DB → kompres → unggah ke object storage; retensi 7 hari.
-- Migrasi dijalankan sebagai job sekali jalan sebelum service baru aktif.
+- Satu VPS ≥ 4 GB RAM, 2 vCPU, Ubuntu LTS; hanya port 22/80/443 yang dibuka publik.
+- `docker-compose.prod.yml`: Postgres & Kafka **tanpa port host**, 7 service, gateway, Caddy,
+  plus profil `migrate` dan `observability` (Prometheus/Grafana hanya di-loopback).
+- Caddy (`infra/Caddyfile`): TLS otomatis Let's Encrypt, `/api/*` → gateway, `/uploads/*`
+  dari volume bersama, sisanya SPA fallback ke `frontend/dist`. Header keamanan termasuk CSP
+  dipasang di Caddy.
+- `backend/services/*/Dockerfile`: multi-stage, `CGO_ENABLED=0`, user non-root, healthcheck.
+  `backend/Dockerfile.migrate` membawa goose + seluruh migrasi untuk job sekali jalan.
+- GitHub Actions `.github/workflows/cd.yml`: build/push image ke GHCR → kirim `frontend/dist`
+  → SSH → `pull` → `migrate` → `up -d`. Rollback dengan mengembalikan `IMAGE_TAG`.
+- Backup `infra/scripts/backup.sh`: enam DB (termasuk `saybu_notifications`), gzip, manifest,
+  retensi lokal 7 hari, upload opsional via `BACKUP_REMOTE` (rclone). Cron: `infra/cron/`.
+- Alerting memakai rule `up == 0` yang sudah ada; scrape produksi memakai
+  `infra/observability/prometheus.prod.yml` (target hostname Docker, bukan host.docker.internal).
 
 ---
 

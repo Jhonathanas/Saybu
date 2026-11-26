@@ -222,7 +222,7 @@ WHERE event_id = '<event_id>' AND status = 'pending';
 **Diagnosis**
 ```bash
 ls -1 backups/                 # snapshot yang tersedia
-cat backups/<timestamp>/manifest.txt
+cat backups/<timestamp>/manifest.txt   # berisi 6 DB, kompresi, retensi, remote
 ```
 
 **Penanganan (PERINGATAN: menimpa data)**
@@ -233,12 +233,15 @@ make backup
 # 2. Hentikan penulisan (opsional tapi disarankan)
 #    matikan service Go, sisakan Postgres
 
-# 3. Restore
+# 3. Restore (menerima .sql.gz maupun .sql)
 make restore DIR=backups/<timestamp>
 ```
 Setara dengan: `bash infra/scripts/restore.sh backups/<timestamp>`. Skrip
 menghapus skema `public` tiap DB lalu memuat ulang dari `pg_dump` (mencakup tabel
-`goose_db_version` sehingga versi migrasi ikut pulih).
+`goose_db_version` sehingga versi migrasi ikut pulih). Enam DB yang dicakup:
+`saybu_auth`, `saybu_catalog`, `saybu_shipping`, `saybu_orders`, `saybu_payments`,
+`saybu_notifications`. Per produksi, ambil salinan juga dari `BACKUP_REMOTE`
+bila snapshot lokal hilang.
 
 **Verifikasi**
 ```bash
@@ -333,10 +336,11 @@ du -sh data/uploads 2>/dev/null
 **Penanganan**
 ```bash
 docker system prune -f          # buang image/container tak terpakai
-# arsipkan/hapus snapshot lama
-ls -1dt backups/* | tail -n +4 | xargs -r rm -rf   # sisakan 3 terbaru
 ```
-Untuk produksi: pindahkan unggahan ke object storage & pasang retensi backup.
+`backup.sh` otomatis membuang snapshot lokal lebih tua dari `BACKUP_KEEP_DAYS`
+(default 7 hari). **Jangan** menghapus manual arsip yang masih dibutuhkan di
+`BACKUP_REMOTE`. Untuk produksi, unggahan produk/bukti transfer berada di volume
+`uploads`; besarnya dipantau bersama disk Postgres & Kafka.
 
 ---
 
@@ -399,9 +403,49 @@ menutupi kapasitas backend. Reset stok sebelum uji checkout:
 
 ---
 
+## 17. Deploy produksi (M7)
+
+**Prasyarat di VPS:** Docker + Compose v2, firewall 22/80/443, repo di
+`DEPLOY_PATH` (mis. `/opt/saybu`), `.env` produksi sudah diisi, dan cron backup
+dipasang (`crontab infra/cron/saybu-backup.cron`).
+
+**Secret GitHub Actions:** `SSH_HOST`, `SSH_USER`, `SSH_KEY`, `SSH_PORT` (opsional),
+`DEPLOY_PATH`. Push ke `main` menjalankan `.github/workflows/cd.yml`.
+
+**Deploy manual dari VPS (bila image sudah tersedia):**
+```bash
+cd /opt/saybu
+export $(grep -v '^#' .env | xargs)   # atau: set -a; . ./.env; set +a
+make prod-config                       # validasi compose
+make prod-migrate                      # goose up, sekali jalan
+make prod-up                           # pull sudah dilakukan CD; start/restart
+make prod-logs
+curl -sS https://<domain>/api/v1/version
+curl -sS -o /dev/null -w '%{http_code}\n' https://<domain>/healthz
+```
+
+**Verifikasi setelah deploy**
+```bash
+docker compose -f docker-compose.prod.yml ps
+docker compose -f docker-compose.prod.yml --profile observability up -d prometheus grafana
+# Grafana: folder "Saybu Alerts" → contact point telegram-admin
+cat backups/$(ls -1 backups | tail -1)/manifest.txt
+```
+
+**Rollback cepat:** set `IMAGE_TAG=<sha-sebelumnya>` di `.env` VPS lalu ulangi
+`make prod-migrate` (kecuali perubahan skema tidak kompatibel) dan `make prod-up`.
+Bila skema berubah, restore dari snapshot terakhir terlebih dahulu (§9).
+
+**Catatan:** domain/DNS, sertifikat, dan seed produk asli bukan bagian dari workflow;
+lihat `docs/TASK.md` M7-01/03/09.
+
+---
+
 ## Referensi
 
 - `docs/ARSITEKTUR.md` §12 (Observability), §13 (Deployment)
 - `docs/SECURITY.md`
 - `infra/scripts/{backup.sh,restore.sh,migrate.sh,dev.sh}`
 - `infra/observability/`, `infra/load/k6-saybu.js`
+- `docker-compose.prod.yml`, `infra/Caddyfile`, `backend/Dockerfile.migrate`
+- `.github/workflows/cd.yml`, `infra/cron/saybu-backup.cron`

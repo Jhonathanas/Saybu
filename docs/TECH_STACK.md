@@ -262,8 +262,12 @@ VITE_BANK_HOLDER="Saybu Buah & Sayur"
 | `make observability` | Jalankan Prometheus + Grafana (profil `observability`) |
 | `make observability-down` | Hentikan Prometheus + Grafana |
 | `make load-test` | Load test k6 via Docker (100 VU katalog + 10 checkout/detik) |
-| `make backup` | Backup semua DB ke `backups/<timestamp>` |
-| `make restore DIR=...` | Restore semua DB dari hasil `make backup` |
+| `make backup` | Backup 6 DB (gzip) ke `backups/<timestamp>` + retensi 7 hari |
+| `make restore DIR=...` | Restore semua DB dari hasil `make backup` (.sql/.sql.gz) |
+| `make prod-config` | Validasi `docker-compose.prod.yml` |
+| `make prod-migrate` | Jalankan image migrasi sekali jalan (`goose up`) |
+| `make prod-up` | Start/update service produksi dari image yang sudah di-pull |
+| `make prod-logs` | Log semua service produksi |
 | `make clean` | Hapus binary & volume container |
 
 ---
@@ -320,11 +324,18 @@ di folder Grafana `Saybu Alerts` (butuh `TELEGRAM_BOT_TOKEN` & `TELEGRAM_ADMIN_C
 5. `docker compose config -q`
 6. Frontend (M1+): `npm ci`, `eslint`, `tsc --noEmit`, `vitest run`, `npm run build`
 
-**CD (merge ke `main`, M7)**
-1. Build & push image ke GHCR dengan tag commit SHA
-2. SSH ke VPS → `docker compose pull` → `docker compose up -d --remove-orphans`
-3. Jalankan migrasi job
-4. Health check; rollback ke tag sebelumnya bila gagal
+**CD (merge ke `main`, M7)** — sesuai `.github/workflows/cd.yml`
+1. Build & push 8 image ke GHCR (`7 service` + `saybu-migrate`) dengan tag commit SHA & `latest`
+2. Build `frontend/dist`, kirim ke VPS via `scp` (VPS tidak perlu Node)
+3. SSH ke VPS: `git fetch/checkout SHA` → `docker login` → `docker compose pull`
+4. Jalankan migrasi: `docker compose -f docker-compose.prod.yml --profile migrate run --rm migrate`
+5. `docker compose -f docker-compose.prod.yml up -d --remove-orphans`
+6. Verifikasi via `curl https://<domain>/healthz` (Caddy → gateway) & dashboard Grafana.
+   Rollback manual: set `IMAGE_TAG=<sha-sebelumnya>` di `.env` VPS lalu ulangi `prod-migrate`/`prod-up`.
+
+**Secret GitHub Actions yang wajib diisi sebelum CD aktif:** `SSH_HOST`, `SSH_USER`,
+`SSH_KEY`, `SSH_PORT` (opsional, default 22), `DEPLOY_PATH` (mis. `/opt/saybu`).
+Namespace `production` disarankan agar secret/protection rule terpisah dari CI.
 
 ---
 

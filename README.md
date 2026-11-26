@@ -29,7 +29,15 @@ Toko online buah & sayur untuk usaha keluarga — sekaligus proyek latihan
 | M3 Ongkir, checkout & order + Kafka | ✅ selesai |
 | M4 Pembayaran & Telegram | ✅ selesai |
 | M5 Kelengkapan (admin pesanan, ringkasan, riwayat akun, error/SEO) | ✅ selesai |
-| M6–M7 | ⬜ |
+| M6 Observability & hardening | ✅ selesai |
+| M7 Deploy | 🟡 artefak siap, menunggu VPS/domain |
+
+## Deploy
+
+Artefak produksi sudah ada di repo: `docker-compose.prod.yml`, `infra/Caddyfile`,
+Dockerfile per service, image `saybu-migrate`, dan `.github/workflows/cd.yml`.
+Panduan penyiapan VPS, secret, migrasi, verifikasi, dan rollback ada di
+[docs/RUNBOOK.md](docs/RUNBOOK.md) §17.
 
 ## Prasyarat
 
@@ -106,8 +114,9 @@ make up / down / logs / ps
 make proto
 make migrate / migrate-down / seed
 make dev / dev-frontend
-make test / test-frontend / test-integration
+make test / test-frontend / test-e2e / test-integration
 make lint / lint-frontend / fmt / build
+make prod-config / prod-migrate / prod-up / prod-logs
 make clean        # hapus binary + volume (data hilang!)
 ```
 
